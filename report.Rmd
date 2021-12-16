@@ -39,7 +39,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/FHPdeMoraes_thesis/Manuscript1_CorticalFolding_aging_MCI_AD")
+setwd("~/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
