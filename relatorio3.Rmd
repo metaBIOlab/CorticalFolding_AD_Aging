@@ -4,10 +4,7 @@ author: "Fernanda Hansen Pacheco de Moraes"
 date: "1 dec 2021"
 output:
   html_document: 
-<<<<<<< HEAD
-=======
     df_print: kable
->>>>>>> 2cd58b57a60b5462bd45b56a298f23e392b8163f
     fig_caption: yes
     fig_width: 8
     number_sections: yes
@@ -17,36 +14,25 @@ editor_options:
   chunk_output_type: inline
 ---
 
-<<<<<<< HEAD
 Description of the procedures and analysis present in Manuscript 1, **Independent morphological correlates to aging, Mild Cognitive Impairment, and Alzheimer’s Disease**, at the Doctorate Thesis presented to the Programa de Pós-Graduação em Ciência Médicas at the Instituto D’Or de Pesquisa e Ensino as a partial requirement to obtain the Doctorate Degree.
-=======
+
 Description of the procedures and analysis present in Manuscript 1, **Independent morphological correlates to aging, Mild Cognitive Impairment**, and Alzheimer’s Disease, at the Doctorate Thesis presented to the Programa de Pós-Graduação em Ciência Médicas at the Instituto D’Or de Pesquisa e Ensino as a partial requirement to obtain the Doctorate Degree.
->>>>>>> 2cd58b57a60b5462bd45b56a298f23e392b8163f
 
 Part of the data used here cannot be shared due to restrictions of the Ethic Committee. Data can be shared upon reasonable request to the corresponding author. To fulfill these limitation, we will generate random data to simulate the results.
 
-Get in touch with us (fernandahmoraes@gmail.com) in case any help is needed, our aim is to improve the code as needed!
+Get in touch with us (fernandahmoraes\@gmail.com) in case any help is needed, our aim is to improve the code as needed!
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,
 	message = FALSE,
 	warning = FALSE,
-<<<<<<< HEAD
 	cache = TRUE
-=======
-<<<<<<< HEAD
-	cache = TRUE
-=======
-	cache = TRUE,
-	messAge = FALSE
->>>>>>> 8dfdbd0d8f4164c8d69dd7a0d13a9415aaa24620
->>>>>>> 2cd58b57a60b5462bd45b56a298f23e392b8163f
 )
 ```
 
 ```{r working directory}
-setwd("~/GitHub/FHPdeMoraes_thesis/Manuscript1_CorticalFolding_aging_MCI_AD")
+setwd("~/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r call packages}
@@ -58,16 +44,9 @@ library(kableExtra)
 library(broom)
 library(MASS)
 library(cutpointr)
-<<<<<<< HEAD
 library(ggstatsplot)
 library(effects)
 
-=======
-<<<<<<< HEAD
-=======
-
->>>>>>> 8dfdbd0d8f4164c8d69dd7a0d13a9415aaa24620
->>>>>>> 2cd58b57a60b5462bd45b56a298f23e392b8163f
 ```
 
 # set seed for random process
@@ -90,53 +69,55 @@ dados_raw <- read_csv("dados_raw.csv")
 ```{r create new variables}
 # estimate cortical folding variables
 dados_raw <- dados_raw %>%
-  mutate( # create new variables
-  logAvgThickness = log10(AvgThickness),
-  logTotalArea = log10(TotalArea),
-  logExposedArea = log10(ExposedArea),
-  localGI = TotalArea / ExposedArea,
-  k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
-  K = 1 / 4 * log10(AvgThickness^2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
-  S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness^2) ,
-  I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness^2),
-  c = as.double(ifelse(ROI == "hemisphere", NA, 4 * pi / GaussianCurvature)),
-  TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
-  ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
-  logTotalArea_corrected = log10(TotalArea_corrected),
-  logExposedArea_corrected = log10(ExposedArea_corrected),
-  localGI_corrected = ifelse(
-    ROI == "hemisphere",
-    TotalArea / ExposedArea,
-    TotalArea_corrected / ExposedArea_corrected
-  ),
-  k_corrected = ifelse(
-    ROI == "hemisphere",
-    sqrt(AvgThickness) * log10(TotalArea) / (log10(ExposedArea) ^ 1.25),
-    sqrt(AvgThickness) * log10(TotalArea_corrected) / (log10(ExposedArea_corrected^1.25) )
-  ),
-  K_corrected =  ifelse(
-    ROI == "hemisphere",
-    1 / 4 * log10(AvgThickness^ 2)+ log10(TotalArea) - 5 / 4 * log10(ExposedArea),
-    1 / 4 * log10(AvgThickness^ 2) + log10(TotalArea_corrected) - 5 / 4 * log10(ExposedArea_corrected)
-  ),
-  I_corrected = ifelse(
-    ROI == "hemisphere",
-    log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness^ 2) ,
-    log10(TotalArea_corrected) + log10(ExposedArea_corrected) + log10(AvgThickness^ 2) 
-  ),
-  S_corrected = ifelse(
-    ROI == "hemisphere",
-    3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness^ 2) ,
-    3 / 2 * log10(TotalArea_corrected) + 3 / 4 * log10(ExposedArea_corrected) - 9 /  4 * log10(AvgThickness^ 2) 
-<<<<<<< HEAD
-  ),
-    Knorm = K_corrected/sqrt(1 + (1/4)^2 + (5/4)^2),
-  Snorm = S_corrected/sqrt((3/2)^2 + (3/4)^2 + (9/4)^2),
-  Inorm = I_corrected/sqrt(1^2 + 1^2 + 1^1)
-=======
+  mutate(
+    # create new variables
+    logAvgThickness = log10(AvgThickness),
+    logTotalArea = log10(TotalArea),
+    logExposedArea = log10(ExposedArea),
+    localGI = TotalArea / ExposedArea,
+    k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
+    K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^
+                                                                                 2) ,
+    I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
+    c = as.double(ifelse(
+      ROI == "hemisphere", NA, 4 * pi / GaussianCurvature
+    )),
+    TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
+    ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
+    logTotalArea_corrected = log10(TotalArea_corrected),
+    logExposedArea_corrected = log10(ExposedArea_corrected),
+    localGI_corrected = ifelse(
+      ROI == "hemisphere",
+      TotalArea / ExposedArea,
+      TotalArea_corrected / ExposedArea_corrected
+    ),
+    k_corrected = ifelse(
+      ROI == "hemisphere",
+      sqrt(AvgThickness) * log10(TotalArea) / (log10(ExposedArea) ^ 1.25),
+      sqrt(AvgThickness) * log10(TotalArea_corrected) / (log10(ExposedArea_corrected ^
+                                                                 1.25))
+    ),
+    K_corrected =  ifelse(
+      ROI == "hemisphere",
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea_corrected) - 5 / 4 * log10(ExposedArea_corrected)
+    ),
+    I_corrected = ifelse(
+      ROI == "hemisphere",
+      log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2) ,
+      log10(TotalArea_corrected) + log10(ExposedArea_corrected) + log10(AvgThickness ^ 2)
+    ),
+    S_corrected = ifelse(
+      ROI == "hemisphere",
+      3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+      3 / 2 * log10(TotalArea_corrected) + 3 / 4 * log10(ExposedArea_corrected) - 9 /  4 * log10(AvgThickness ^ 2)
+      
+    ),
+    Knorm = K_corrected / sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2),
+    Snorm = S_corrected / sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2),
+    Inorm = I_corrected / sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1)
   )
->>>>>>> 2cd58b57a60b5462bd45b56a298f23e392b8163f
-)
 
 # create age intervals
 dados_raw$Age_interval <- cut(dados_raw$Age,
@@ -1232,7 +1213,6 @@ aov_diag_K_diag_TK
 ```
 
 
-
 Is it easier to diff diag when younger?
 ```{r}
 ggplot(filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"), aes(x = Age_interval, y = logAvgThickness, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
@@ -1242,7 +1222,6 @@ aov_diag2 <- aov(logAvgThickness ~ Diagnostic*Age_interval, data = filter(dados_
 summary(aov_diag2)
 aov_diag_2_diag_TK <- TukeyHSD(aov_diag2)
 aov_diag_2_diag_TK$`Diagnostic:Age_interval`
-
 
 
 ggplot(filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"), aes(x = Age_interval, y = K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
@@ -1255,14 +1234,12 @@ aov_diag_2_diag_TK$`Diagnostic:Age_interval`
 
 ```
 
-
 ```{r diag - Age decay}
 ggplot(dados_hemi_v1, aes(x = Diagnostic, y = K_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
  stat_compare_means(method = "anova") + theme_pubr()
 
 ```
-
 
 ```{r}
 ggplot(dados_hemi_v1, aes(x = Diagnostic, y = S_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
@@ -1279,7 +1256,6 @@ ggplot(filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)
   geom_boxplot()  + theme_pubr()
 
 ```
-
 
 ### Podemos localizar partes com maior detrimento por idade e doenca?
 
