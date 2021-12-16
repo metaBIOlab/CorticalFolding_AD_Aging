@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: >-
+  Analysis code for Independent morphological
+  variables correlate to aging, Mild Cognitive
+  Impairment, and Alzheimer's Disease
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+authors:
+  - given-names: 'Fernanda Hansen P. '
+    family-names: de Moraes
+    email: fernanda.hansen@idor.org
+    affiliation: Instituto D'Or de Pesquisa e Ensino (IDOR)
+    orcid: 'https://orcid.org/0000-0002-1485-8126'
+version: v0.1
+doi: 10.5281/zenodo.5786921
+date-released: 2021-12-16
+url: "https://github.com/metaBIOlab/CorticalFolding_AD_Aging"
