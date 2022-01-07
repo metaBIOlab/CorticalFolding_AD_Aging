@@ -1160,7 +1160,7 @@ cutpoint_a <- ggplot(dados_hemi_v1, aes(x = K, color = Diagnostic, fill = Diagno
         labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.48), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
     scale_fill_manual(values=cbbPalette) +
     scale_colour_manual(values=cbbPalette) +
-    annotate("text", x = xrng1[1], y = Inf, vjust = 1, hjust = 1,label = lab1, size = 2)
+    annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95,label = lab1, size = 2)
 
 lab2 = paste("AD: ACC=", signif(cpT$acc,2),"\nSENS=",signif(cpT$sensitivity,2),"\nSPEC=",signif(cpT$specificity,2),"\nMCI: ACC=", signif(cpT_MCI$acc,2),"\nSENS=",signif(cpT_MCI$sensitivity,2),"\nSPEC=",signif(cpT_MCI$specificity,2))
 
@@ -1178,7 +1178,7 @@ cutpoint_b <- ggplot(dados_hemi_v1, aes(x = logAvgThickness, color = Diagnostic,
     labs(x = expression('log'[10]*'T')) + scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
     scale_fill_manual(values=cbbPalette) +
     scale_colour_manual(values=cbbPalette) +
-    annotate("text", x = xrng2[1], y = Inf, vjust = 1, hjust = 1, label = lab2, size = 2)
+    annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab2, size = 2)
 # cutpoint_b
 
 fig_cutpoint <- ggarrange(cutpoint_a, cutpoint_b, labels = c("A", "B"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "top")
@@ -1267,7 +1267,7 @@ cutpoint_a_deaged <- ggplot(dados_hemi_v1, aes(x = K_age_decay, color = Diagnost
               labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.48), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
   scale_fill_manual(values=cbbPalette) +
   scale_colour_manual(values=cbbPalette) +
-    annotate("text", x = xrng1[1], y = Inf, vjust = 1, hjust = 1, label = lab3, size = 2)
+    annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab3, size = 2)
 # cutpoint_a_deaged
 
 lab4 = paste("AD: ACC=", signif(cpT_deaged$acc,2),"\nSENS=",signif(cpT_deaged$sensitivity,2),"\nSPEC=",signif(cpT_deaged$specificity,2),"\nMCI: ACC=", signif(cpT_MCI_deaged$acc,2),"\nSENS=",signif(cpT_MCI_deaged$sensitivity,2),"\nSPEC=",signif(cpT_MCI_deaged$specificity,2))
@@ -1284,7 +1284,7 @@ cutpoint_b_deaged <- ggplot(dados_hemi_v1, aes(x = logAvgThickness_age_decay, co
  scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
   scale_fill_manual(values=cbbPalette) +
   scale_colour_manual(values=cbbPalette) +
-annotate("text", x = xrng2[1], y = Inf, vjust = 1, hjust = 1, label = lab4, size = 2)
+annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab4, size = 2)
 
 fig_cutpoint_deaged_alt <- ggarrange(cutpoint_a, cutpoint_a_deaged, cutpoint_b, cutpoint_b_deaged, labels = c("A", "B", "C", "D"),  ncol = 1, nrow = 4, font.label = list(size = 11), common.legend = TRUE, legend = "top")
 ```
@@ -1295,6 +1295,7 @@ fig_cutpoint_deaged_alt <- ggarrange(cutpoint_a, cutpoint_a_deaged, cutpoint_b, 
 ```{r figure2, fig.cap="\\label{fig:figure2}Optimal cut-off (maximum sensitivity + specificity) for K and Average Cortical Thickness including results with removed age effect (age correction). AD in red (N = 13), MCI in green (N = 33), and Cognitive Unimpaired Controls (CTL) in blue (N = 77). The dashed line represents optimal cut-off to discriminate AD and CTL, and the dotted line represents optimal cut-off to discriminate MCI and CTL. ACC - accuracy, SPEC - specificity, and SENS - sensibility. (A) The optimal cut-off for the CTL-AD contrast is -0.54 and CTL-MCI, -0.53. (B) The optimal cut-off for CTL-AD = -0.52 and CTL-MCI = -0.51. (C) The optimal cut-off for CTL-AD = 0.39 mm and CTL-MCI = 0.40 mm. (D) The optimal cut-off for CTL-AD = 0.43 mm and CTL-MCI = 0.44 mm."}
 
 fig_cutpoint_deaged_alt
+ggsave("fig_cutpoint_deaged_alt.pdf", plot = fig_cutpoint_deaged_alt, dpi=1200, width = 8.7, height = 22, units = "cm", device = "pdf")
 
 ggsave("fig_cutpoint_deaged_alt.pdf", plot = fig_cutpoint_deaged_alt, dpi=1200, width = 8.7, height = 22, units = "cm", device = "pdf")
 ```
@@ -1441,7 +1442,9 @@ cutpoint_b_lobes <-
     axis.title = element_text(size = 11),
     axis.text = element_text(size = 10),
     text = element_text(size = 10)
-  ) + facet_grid(subgroup ~ .)
+  ) + facet_grid(subgroup ~ .) +
+  scale_fill_manual(values=cbbPalette) +
+  scale_colour_manual(values=cbbPalette)
 # cutpoint_b
 
 fig_cutpoint_lobes <-
