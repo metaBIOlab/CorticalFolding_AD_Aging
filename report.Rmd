@@ -16,7 +16,7 @@ editor_options:
 Description of the procedures and analysis present in Manuscript 1,
 **Independent morphological correlates to aging, Mild Cognitive
 Impairment, and Alzheimer's Disease**, at the Doctorate Thesis presented
-to the Programa de Pós-Graduação em Ciência Médicas at the Instituto
+to the Programa de Pós-Graduação em Ciências Médicas at the Instituto
 D'Or de Pesquisa e Ensino as a partial requirement to obtain the
 Doctorate Degree.
 
@@ -522,7 +522,6 @@ fig1_alt_2 <-
   )
 fig1_alt_2
 ggsave("fig1_alt_2.pdf", plot = fig1_alt_2, dpi=1200, width = 8.7, height = 11, units = "cm", device = "pdf")
-
 
 ```
 
@@ -1651,9 +1650,9 @@ ggbetweenstats(
 
 fig2c
 
-fig2 <- ggarrange(fig2a, ggarrange(fig2b, fig2c, labels = c("B","C"), nrow = 1, ncol = 2, font.label = list(size = 11)),labels = c("A"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "top")
+# fig2 <- ggarrange(fig2a, ggarrange(fig2b, fig2c, labels = c("B","C"), nrow = 1, ncol = 2, font.label = list(size = 11)),labels = c("A"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "top")
 
-fig1_alt <- ggarrange(fig1a_alt, fig2a, fig1b, labels = c("A", "B", "C"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+# fig1_alt <- ggarrange(fig1a_alt, fig2a, fig1b, labels = c("A", "B", "C"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
 
 a <- aov(K ~ Diagnostic*ROI, data = dados)
 summary(a)
