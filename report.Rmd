@@ -73,6 +73,7 @@ library(effects)
 ```{r} 
 # COLOR BLIND PALETTE WITH BLACK
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette2 <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
 
 
@@ -362,8 +363,8 @@ fig2a <- ggplot(dados_hemi_v1,
   guides(alpha = "none") +
   theme_pubr() +
   scale_x_continuous(limits = c(4.45, 4.65)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 ```{r}
@@ -445,8 +446,8 @@ fig1a <- ggplot(
   theme_pubr() +
   labs(y = "Slope", x = "Age [years]") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 ```{r}
@@ -464,8 +465,8 @@ fig1b <- ggplot(data = dados_hemi_v1, aes(Age, K, color = Diagnostic, fill = Dia
   theme_pubr() +
     guides(alpha = "none", color = "none", fill = "none") + 
   labs(x = "Age [years]") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig1b
 ```
@@ -483,8 +484,8 @@ ggplot(data = dados_hemi_v1, aes(Age, S, color = Diagnostic, fill = Diagnostic, 
   theme_pubr() +
     guides(alpha = "none", color = "none", fill = "none") + 
   labs(x = "Age [years]") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 ```{r}
@@ -500,8 +501,8 @@ ggplot(data = dados_hemi_v1, aes(Age, I, color = Diagnostic, fill = Diagnostic, 
   theme_pubr() +
     guides(alpha = "none", color = "none", fill = "none") + 
   labs(x = "Age [years]") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 ```{r}
@@ -547,8 +548,8 @@ T <- ggplot(data = dados_hemi_v1, aes(Age, AvgThickness, color = Diagnostic, fil
   theme_pubr() +
     guides(alpha = "none", color = "none", fill = "none") + 
   labs(x = "Age [years]") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 AT <- ggplot(data = dados_hemi_v1, aes(Age, TotalArea, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
@@ -559,8 +560,8 @@ AT <- ggplot(data = dados_hemi_v1, aes(Age, TotalArea, color = Diagnostic, fill 
   scale_y_continuous(
     labels = function(x)
       x / 10000) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 AE <- ggplot(data = dados_hemi_v1, aes(Age, ExposedArea, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
@@ -571,8 +572,8 @@ AE <- ggplot(data = dados_hemi_v1, aes(Age, ExposedArea, color = Diagnostic, fil
   scale_y_continuous(
     labels = function(x)
       x / 10000) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 
 ggarrange(T, AT, AE, ncol = 1, common.legend = TRUE, legend = "bottom")
@@ -850,8 +851,8 @@ figs1 <- ggplot(data = filter(aov_summary, `p adj` < 0.05 | `p adj` == 0.05), ae
   theme_pubr() + 
   theme(axis.title = element_text(size = 11),
         axis.text = element_text(size = 10), text = element_text(size = 10)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_summary[order(aov_summary$diff, decreasing = TRUE),]
 
@@ -886,8 +887,8 @@ ggplot(e, aes(
   theme_pubr() +
   facet_wrap(ROI ~ .) +
   labs(y = "K") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 ```{r}
@@ -966,8 +967,8 @@ figs2a <- ggplot(data = a.TukeyHSD, aes(
     axis.text = element_text(size = 10),
     text = element_text(size = 10)
   ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 
 a <- aov(K_age_decay ~ Diagnostic * ROI * Age_interval10, data = dados)
@@ -1042,8 +1043,8 @@ figs2b <- ggplot(data = a.TukeyHSD, aes(
     axis.text = element_text(size = 10),
     text = element_text(size = 10)
   ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 figs2 <-
   ggarrange(
@@ -1158,8 +1159,8 @@ cutpoint_a <- ggplot(dados_hemi_v1, aes(x = K, color = Diagnostic, fill = Diagno
           axis.text = element_text(size = 10), text = element_text(size = 10)) +
     scale_x_continuous(
         labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.48), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
-    scale_fill_manual(values=cbbPalette) +
-    scale_colour_manual(values=cbbPalette) +
+    scale_fill_manual(values=cbbPalette2) +
+    scale_colour_manual(values=cbbPalette2) +
     annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95,label = lab1, size = 2)
 
 lab2 = paste("AD: ACC=", signif(cpT$acc,2),"\nSENS=",signif(cpT$sensitivity,2),"\nSPEC=",signif(cpT$specificity,2),"\nMCI: ACC=", signif(cpT_MCI$acc,2),"\nSENS=",signif(cpT_MCI$sensitivity,2),"\nSPEC=",signif(cpT_MCI$specificity,2))
@@ -1176,8 +1177,8 @@ cutpoint_b <- ggplot(dados_hemi_v1, aes(x = logAvgThickness, color = Diagnostic,
           axis.text = element_text(size = 10), text = element_text(size = 10), legend.position = "none") +
     labs(x = expression('log'[10]*'T')) +
     labs(x = expression('log'[10]*'T')) + scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
-    scale_fill_manual(values=cbbPalette) +
-    scale_colour_manual(values=cbbPalette) +
+    scale_fill_manual(values=cbbPalette2) +
+    scale_colour_manual(values=cbbPalette2) +
     annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab2, size = 2)
 # cutpoint_b
 
@@ -1265,8 +1266,8 @@ cutpoint_a_deaged <- ggplot(dados_hemi_v1, aes(x = K_age_decay, color = Diagnost
     axis.text = element_text(size = 10), text = element_text(size = 10)) +
   labs(x = "K (After age correction)")  + scale_x_continuous(
               labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.48), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
     annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab3, size = 2)
 # cutpoint_a_deaged
 
@@ -1282,8 +1283,8 @@ cutpoint_b_deaged <- ggplot(dados_hemi_v1, aes(x = logAvgThickness_age_decay, co
     axis.text = element_text(size = 10), text = element_text(size = 10), legend.position = "none") +
   labs(x = expression('log'[10]*'T '*('After age correction'))) +
  scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
 annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab4, size = 2)
 
 fig_cutpoint_deaged_alt <- ggarrange(cutpoint_a, cutpoint_a_deaged, cutpoint_b, cutpoint_b_deaged, labels = c("A", "B", "C", "D"),  ncol = 1, nrow = 4, font.label = list(size = 11), common.legend = TRUE, legend = "top")
@@ -1408,8 +1409,8 @@ cutpoint_a_lobes <-
     text = element_text(size = 10)
   ) +
   facet_grid(subgroup ~ .) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 # cutpoint_a
 
 
@@ -1443,8 +1444,8 @@ cutpoint_b_lobes <-
     axis.text = element_text(size = 10),
     text = element_text(size = 10)
   ) + facet_grid(subgroup ~ .) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 # cutpoint_b
 
 fig_cutpoint_lobes <-
@@ -1457,8 +1458,8 @@ fig_cutpoint_lobes <-
     common.legend = TRUE,
     legend = "top"
   ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig_cutpoint_lobes
 
@@ -1474,8 +1475,8 @@ ggplot(dados_hemi_v1, aes(x = Diagnostic, y = S, color = Diagnostic, fill = Diag
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_diag_S <- aov(S ~ Diagnostic, data = dados_hemi_v1)
 summary(aov_diag_S)
@@ -1488,8 +1489,8 @@ ggplot(dados_hemi_v1, aes(x = Diagnostic, y = S_age_decay, color = Diagnostic, f
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_diag_S_age_decay <- aov(S_age_decay ~ Diagnostic, data = dados_hemi_v1)
 summary(aov_diag_S_age_decay)
@@ -1529,16 +1530,18 @@ ggplot(
   geom_hline(yintercept = 1.25, linetype = "dashed") +
   theme_pubr() +
   labs(y = "slope") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  guides(alpha = FALSE)
 
 ggplot(data = dados_hemi_v1, aes(logExposedArea_age_decay, 1/2 * logAvgThickness_age_decay + logTotalArea_age_decay , color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() + 
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr()+
   labs(y = "1/2 log(AvgThickness) + log(TotalArea) (after age correction)", x = "log(ExposedArea) (after age correction)" ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  guides(alpha = FALSE)
 
 ggplot(data = dados_hemi_v1, aes(Age, K_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
@@ -1546,8 +1549,9 @@ ggplot(data = dados_hemi_v1, aes(Age, K_age_decay, color = Diagnostic, fill = Di
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
   labs(y = "K after age correction") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  guides(alpha = FALSE)
 
 ```
 
@@ -1613,8 +1617,8 @@ ggplot(
   theme_pubr() +
   labs(y = "slope")+
   theme(legend.position = "none") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 #kruskal.test(estimate, Diagnostic, data = filter(diagnostic_Coef, term == "logExposedArea"))
 
@@ -1622,15 +1626,15 @@ ggplot(data = dados_hemi_v1, aes(logExposedArea, 1/2 * logAvgThickness + logTota
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = dados_hemi_v1, aes(Age, K, color = Diagnostic, fill = Diagnostic)) +
   geom_point() + stat_regline_equation() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig2c <- ggplot(dados_hemi_v1, aes(x = Diagnostic, y = K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
@@ -1639,8 +1643,8 @@ fig2c <- ggplot(dados_hemi_v1, aes(x = Diagnostic, y = K, color = Diagnostic, fi
   guides(alpha = "none") +
   theme(axis.title = element_text(size = 11),
     axis.text = element_text(size = 10), text = element_text(size = 10), legend.position = "none") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggbetweenstats(
     data = dados_hemi_v1,
@@ -1648,8 +1652,8 @@ ggbetweenstats(
     y = K, outlier.tagging = TRUE,
     plot.type = "box"
 )  +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig2c
 
@@ -1693,8 +1697,8 @@ geom_text(aes(label = str_c("p adj = ", signif(`p adj`, digits = 2))), nudge_x =
   theme_pubr() + 
   theme(axis.title = element_text(size = 11),
     axis.text = element_text(size = 10), text = element_text(size = 10)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 
 ```
@@ -1703,14 +1707,14 @@ geom_text(aes(label = str_c("p adj = ", signif(`p adj`, digits = 2))), nudge_x =
 ggplot(dados_hemi_v1, aes(x = Diagnostic, y = S, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(dados_hemi_v1, aes(x= S, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_density() +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggbetweenstats(
     data = dados_hemi_v1,
@@ -1718,8 +1722,8 @@ ggbetweenstats(
     y = S, outlier.tagging = TRUE,
     plot.type = "box"
 )  +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_diag <- aov(S ~ Diagnostic, data = dados_hemi_v1)
 summary(aov_diag)
@@ -1729,14 +1733,14 @@ aov_diag_K_diag_TK
 ggplot(dados_hemi_v1, aes(x = Diagnostic, y = I, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(dados_hemi_v1, aes(x= I, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_density() +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggbetweenstats(
     data = dados_hemi_v1,
@@ -1744,8 +1748,8 @@ ggbetweenstats(
     y = I, outlier.tagging = TRUE,
     plot.type = "box"
 )  +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_diag <- aov(I ~ Diagnostic, data = dados_hemi_v1)
 summary(aov_diag)
@@ -1759,8 +1763,8 @@ Is it easier to diff diag when younger?
 ggplot(filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"), aes(x = Age_interval, y = logAvgThickness, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot()  +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_diag2 <- aov(logAvgThickness ~ Diagnostic*Age_interval, data = filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"))
 summary(aov_diag2)
@@ -1771,8 +1775,8 @@ aov_diag_2_diag_TK$`Diagnostic:Age_interval`
 ggplot(filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"), aes(x = Age_interval, y = K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot()  +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aov_diag2 <- aov(logAvgThickness ~ Diagnostic*Age_interval, data = filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"))
 summary(aov_diag2)
@@ -1786,8 +1790,8 @@ ggplot(dados_hemi_v1, aes(x = Diagnostic, y = K_age_decay, color = Diagnostic, f
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ```
 
@@ -1795,14 +1799,14 @@ ggplot(dados_hemi_v1, aes(x = Diagnostic, y = K_age_decay, color = Diagnostic, f
 ggplot(dados_hemi_v1, aes(x = Diagnostic, y = S_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot()  +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(dados_hemi_v1, aes(x= S_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_density() +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ```
 
@@ -1812,8 +1816,9 @@ Is it easier to diff diag when younger?
 ggplot(filter(dados_hemi_v1, Age_interval != "[45,50)"& Age_interval != "[50,55)"& Age_interval != "[40,45)"& Age_interval != "[55,60)"), aes(x = Age_interval, y = logAvgThickness_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot()  +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  guides(alpha = FALSE)
 
 ```
 
@@ -1849,8 +1854,8 @@ ggplot(data = filter(dados_lobos_v1, Diagnostic == "CTL"), aes(logExposedArea, 1
   geom_abline(slope = filter(lm_diagnostic_lobe, term == "logExposedArea", Diagnostic == "CTL", ROI == "hemisphere")$estimate, linetype = "dashed", intercept = filter(lm_diagnostic_lobe, term == "(Intercept)", Diagnostic == "CTL", ROI == "hemisphere")$estimate) +
   stat_regline_equation() +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(
   data = dados_lobos_v1,
@@ -1866,8 +1871,8 @@ ggplot(
   stat_regline_equation() + 
   facet_wrap(ROI ~ .) +
   theme_pubr()  +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(
   data = filter(lm_diagnostic_lobe, term == "logExposedArea"),
@@ -1883,8 +1888,8 @@ ggplot(
   labs(y = "slope") + 
   facet_wrap(ROI ~. ) + 
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ```
 
@@ -1915,8 +1920,8 @@ ggplot(data = filter(dados_lobos_v1, Diagnostic == "CTL"), aes(logExposedArea_co
   geom_abline(slope = filter(lm_diagnostic_lobe_curv, term == "logExposedArea_corrected", Diagnostic == "CTL", ROI == "hemisphere")$estimate, linetype = "dashed", intercept = filter(lm_diagnostic_lobe_curv, term == "(Intercept)", Diagnostic == "CTL", ROI == "hemisphere")$estimate) + 
   stat_regline_equation() + 
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = dados_lobos_v1, aes(logExposedArea_corrected, 1/2 * logAvgThickness + logTotalArea_corrected, color = Diagnostic, fill = Diagnostic)) +
   geom_point() +
@@ -1925,8 +1930,8 @@ ggplot(data = dados_lobos_v1, aes(logExposedArea_corrected, 1/2 * logAvgThicknes
   stat_regline_equation() + 
   theme_pubr() +
   facet_wrap(ROI ~. ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(
   data = filter(lm_diagnostic_lobe_curv, term == "logExposedArea_corrected"),
@@ -1941,8 +1946,8 @@ ggplot(
   theme_pubr() +
   labs(y = "slope") +
   facet_wrap(ROI ~. ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = dados_lobos_v1, aes(Age, K_corrected,color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_smooth(method = "lm", se = TRUE) +
@@ -1950,8 +1955,8 @@ ggplot(data = dados_lobos_v1, aes(Age, K_corrected,color = Diagnostic, fill = Di
   theme_pubr() +
   facet_wrap(ROI ~. ) +
   labs(y = "K") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 
 ggplot(dados_lobos_v1, aes(x = Diagnostic, y = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
@@ -1959,8 +1964,8 @@ ggplot(dados_lobos_v1, aes(x = Diagnostic, y = K_corrected, color = Diagnostic, 
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
   labs(y = "K") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ```
 
@@ -1976,8 +1981,8 @@ ggplot(data = filter(lm_diagnostic_lobe_curv, term == "logExposedArea_age_decay"
   geom_density() +
   geom_vline(xintercept = 1.25) +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aggregate(filter(lm_diagnostic_lobe_curv, term == "logExposedArea_age_decay")$estimate, by=list(diag=filter(lm_diagnostic_lobe_curv, term == "logExposedArea_age_decay")$Diagnostic), mean)
 
@@ -1991,8 +1996,8 @@ ggplot(data = filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_de
   geom_density() +
   geom_vline(xintercept = 1.25) +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 aggregate(filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_decay")$estimate, by=list(diag=filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_decay")$Diagnostic, ROI=filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_decay")$ROI), mean)
 
@@ -2004,8 +2009,8 @@ ggplot(data = filter(dados_lobos_v1, Diagnostic == "CTL"), aes(logExposedArea_ag
   geom_abline(slope = filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_decay", Diagnostic == "CTL", ROI == "hemisphere")$estimate, linetype = "dashed", intercept = filter(lm_diagnostic_Agedecay_lobe, term == "(Intercept)", Diagnostic == "CTL", ROI == "hemisphere")$estimate) +
   stat_regline_equation() + 
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = dados_lobos_v1, aes(logExposedArea_age_decay, 1/2 * logAvgThickness_age_decay + logTotalArea_age_decay, color = Diagnostic, fill = Diagnostic)) +
   geom_point() +
@@ -2013,8 +2018,8 @@ ggplot(data = dados_lobos_v1, aes(logExposedArea_age_decay, 1/2 * logAvgThicknes
   geom_abline(slope = filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_decay", Diagnostic == "CTL", ROI == "hemisphere")$estimate, linetype = "dashed", intercept = filter(lm_diagnostic_Agedecay_lobe, term == "(Intercept)", Diagnostic == "CTL", ROI == "hemisphere")$estimate) +
   stat_regline_equation() + 
   theme_pubr() + facet_wrap(ROI ~. ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(
   data = filter(lm_diagnostic_Agedecay_lobe, term == "logExposedArea_age_decay"),
@@ -2031,24 +2036,24 @@ ggplot(
   theme_pubr() +
   labs(y = "slope") +
   facet_wrap(ROI ~. ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = filter(dados_lobos_v1, Diagnostic == "CTL"), aes(Age, K_corrected, alpha = 0.4)) +
   geom_smooth(se = TRUE) +
   stat_regline_equation() +
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = filter(dados_lobos_v1, Diagnostic == "CTL"), aes(Age, K_age_decay, alpha = 0.4)) +
   geom_smooth(se = TRUE) +
   stat_regline_equation() +
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = dados_lobos_v1, aes(Age, K_age_decay, color = Diagnostic, fill = Diagnostic)) +
   stat_regline_equation() +
@@ -2056,16 +2061,16 @@ ggplot(data = dados_lobos_v1, aes(Age, K_age_decay, color = Diagnostic, fill = D
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
   labs(y = "K (After age correction)") +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(dados_lobos_v1, aes(x = Diagnostic, y = K_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ```
 
@@ -2125,8 +2130,8 @@ ggplot(data = filter(a.TukeyHSD, `p adj` < 0.05 | `p adj` == 0.05), aes(
   theme_pubr() + 
   theme(axis.title = element_text(size = 11),
     axis.text = element_text(size = 10), text = element_text(size = 10)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 
@@ -2192,8 +2197,8 @@ fig3a <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.S, color = Diagnostic)) +
   labs(x = "Mean K (norm)", y = "Mean S (norm)") + 
   theme(axis.title = element_text(size = 11),
     axis.text = element_text(size = 10), text = element_text(size = 10)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig3c <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
   geom_point() +
@@ -2202,8 +2207,8 @@ fig3c <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
   labs(x = "Mean K (norm)", y = "Mean I (norm)") +
   theme(axis.title = element_text(size = 11),
     axis.text = element_text(size = 10), text = element_text(size = 10)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 lobes <- c(
     F = "Frontal Lobe",
@@ -2250,8 +2255,8 @@ fig3b <- ggplot(mean_K_I_S_ADCTL, aes(x = mean.K, y = mean.S, color = Diagnostic
     labs(x = "Mean K (norm)", y = "Mean S (norm)", shape = "Age") +
     theme(axis.title = element_text(size = 11),
           axis.text = element_text(size = 10), text = element_text(size = 8)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig3d <- ggplot(mean_K_I_S_ADCTL, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age.group ))+
     geom_point() +
@@ -2262,8 +2267,8 @@ fig3d <- ggplot(mean_K_I_S_ADCTL, aes(x = mean.K, y = mean.I, color = Diagnostic
     labs(x = "Mean K (norm)", y = "Mean I (norm)", shape = "Age")  +
     theme(axis.title = element_text(size = 11),
           axis.text = element_text(size = 10), text = element_text(size = 8)) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 fig3 <- ggarrange(fig3a, fig3b, labels = c("A", "B"), nrow=2, ncol=1, font.label = list(size = 11))
 fig3s <- ggarrange(fig3a, fig3b,fig3c, fig3d, labels = c("A", "B","C","D"), nrow=2, ncol=2, font.label = list(size = 11))
@@ -2285,16 +2290,16 @@ ggplot(dados_lobos_v1, aes(x = Diagnostic, y = S_corrected, color = Diagnostic, 
  stat_compare_means(method = "anova") +
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(dados_lobos_v1, aes(x = Diagnostic, y = I_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
   facet_wrap(ROI ~ . ) +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 ```
 
 ### ANOVA
@@ -2360,8 +2365,8 @@ ggplot(data = filter(aov_summary_KSI_ADCTL, `p adj` < 0.05 |
   facet_grid(morphological_parameter ~ Age_correction, labeller = label_both) +
   labs(title = "95% family-wise confidence level", y =  "Differences in mean levels of Diagnostic", x = "ROI", caption = "only significant differences, p adj =< 0.05)") +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 # aov_summary_KSI_ADCTL
 
@@ -2472,16 +2477,16 @@ ggplot(data = dados_hemi_v1_CD_behaviour, aes(x = Diagnostic, y = clinical_test_
   facet_wrap(clinical_test ~ ., scales = "free", ncol = 2) +
   stat_compare_means(method = "anova") +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = dados_hemi_v1_CD_biochq, aes(x = Diagnostic, y = clinical_test_value, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
   geom_boxplot()+
   facet_wrap(clinical_test ~ ., scales = "free", ncol = 2) +
   stat_compare_means(method = "anova") +
   theme_pubr() +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ```
 
@@ -2494,8 +2499,8 @@ ggplot(data = filter(dados_hemi_v1, Lipoxina != 0 | !is.na(Lipoxina)), aes(K, Li
   geom_smooth(se = TRUE) +
   theme_pubr() +
   labs(caption = paste("N = ", n_distinct(filter(dados_hemi_v1, Lipoxina != 0 | !is.na(Lipoxina))$SUBJ)))  +
-  scale_fill_manual(values=cbbPalette) +
-  scale_colour_manual(values=cbbPalette)
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
 
 ggplot(data = filter(dados_hemi_v1, COGNITIVE_INDEX != 0 | !is.na(COGNITIVE_INDEX)), aes(K, COGNITIVE_INDEX,  color = Diagnostic, fill = Diagnostic)) +
   geom_point() + stat_cor() + 
