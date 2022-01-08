@@ -280,14 +280,7 @@ dados_hemi_v1 %>%
     N = n_distinct(SUBJ),
     age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
     age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
-    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2)),
-    T =  paste(signif(mean(AvgThickness), 2), "±", signif(sd(AvgThickness), 2)),
-    AT =  paste(signif(mean(TotalArea), 2), "±", signif(sd(TotalArea), 2)),
-    AE =  paste(signif(mean(ExposedArea), 2), "±", signif(sd(ExposedArea), 2)),
-    k =  paste(signif(mean(k), 2), "±", signif(sd(k), 2)),
-    K =  paste(signif(mean(K), 2), "±", signif(sd(K), 2)),
-    S =  paste(signif(mean(S), 2), "±", signif(sd(S), 2)),
-    I =  paste(signif(mean(I), 2), "±", signif(sd(I), 2))
+    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2))
   ) %>%
   kable(digits = 2) %>%
   kable_styling()
@@ -341,7 +334,7 @@ paste(
 
 ## Correlation within cortical fodling variables and age healthy subjects)
 
-### Slope alpha (SI Appendix, Text SI)
+### Slope alpha
 
 ```{r}
 lm_Age <-

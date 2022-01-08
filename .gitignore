@@ -4,3 +4,8 @@
 .Ruserdata
 *.csv
 *.rdb
+report_cleanversion_files/.
+report_cleanversion_cache/.
+report_cleanversion_files
+report_cleanversion_cache
+*.xls
