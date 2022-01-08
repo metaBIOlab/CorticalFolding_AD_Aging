@@ -1,0 +1,796 @@
+---
+title: "Manuscript 1 from Fernanda Hansen P. de Moraes Thesis - Cortical folding alterations in humans due to aging and diseases"
+author: "Fernanda Hansen Pacheco de Moraes"
+date: "1 dec 2021"
+output:
+  html_document: 
+    fig_caption: yes
+    fig_width: 8
+    number_sections: yes
+    theme: paper
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+Description of the procedures and analysis present in Manuscript 1,
+**Independent morphological correlates to aging, Mild Cognitive
+Impairment, and Alzheimer's Disease**, at the Doctorate Thesis presented
+to the Programa de Pós-Graduação em Ciências Médicas at the Instituto
+D'Or de Pesquisa e Ensino as a partial requirement to obtain the
+Doctorate Degree.
+
+Part of the data used here cannot be shared due to restrictions of the
+Ethic Committee. Data can be shared upon reasonable request to the
+corresponding author. To fulfill these limitation, we will generate
+random data to simulate the results.
+
+Get in touch with us
+([fernandahmoraes\@gmail.com](mailto:fernandahmoraes@gmail.com){.email})
+in case any help is needed, our aim is to improve the code as needed!
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE
+)
+```
+
+```{r working directory}
+setwd("~/GitHub/CorticalFolding_AD_Aging")
+```
+
+```{r functions, message=FALSE, warning=FALSE}
+## define functions
+
+# test angular coeficinet versus theoretical value
+test_coef <- function(reg, coefnum, val){
+  co <- coef(summary(reg))
+  tstat <- (co[coefnum,1] - val)/co[coefnum,2]
+  2 * pt(abs(tstat), reg$df.residual, lower.tail = FALSE)
+}
+
+# wrap text
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+```
+
+```{r call packages}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(ggpubr)
+library(kableExtra)
+library(broom)
+library(MASS)
+library(cutpointr)
+library(ggstatsplot)
+library(effects)
+
+```
+
+```{r} 
+# COLOR BLIND PALETTE WITH BLACK
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette2 <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# set seed for random process
+
+```{r}
+set.seed(1)
+```
+
+```{r import files}
+
+dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv", 
+    locale = locale(decimal_mark = ",", grouping_mark = "."))
+
+AHEAD <- read_csv("AHEAD.csv", locale = locale(decimal_mark = ",", 
+    grouping_mark = "."))
+
+ADNI <- read_delim("ADNI.csv", delim = ";", 
+    quote = "'", escape_double = FALSE, locale = locale(decimal_mark = ",", 
+        grouping_mark = "."), trim_ws = TRUE)
+
+ADNICTL <- read_delim("ADNICTL.csv", delim = ";", 
+    quote = "'", escape_double = FALSE, locale = locale(decimal_mark = ",", 
+        grouping_mark = "."), trim_ws = TRUE)
+
+# IDOR <- read_csv("dados_raw.csv")
+# AOMICPIOP1 <- read_csv("AOMICPIOP1.csv", locale = locale(decimal_mark = ",", 
+#     grouping_mark = "."))
+
+# dados_wang <- read_csv("dados_wang.csv", locale = locale(decimal_mark = ",", 
+#     grouping_mark = "."))
+```
+
+```{r}
+## AHEAD age is defined as intervals, here we will use the mean value of each interval
+
+AHEAD <- AHEAD %>%
+  mutate(Age = as.double((
+    as.double(str_sub(Group, 1, 2)) + as.double(str_sub(Group, 4, 5))
+  ) / 2),
+  Diagnostic = "CTL",
+  SUBJ = ScanName)
+
+ADNIAD <- ADNI %>%
+  mutate(SUBJ = SubjectID, Diagnostic = "AD") %>%
+  dplyr::select(c(SUBJ, Age, Diagnostic))
+
+ADNICTL <- ADNICTL %>%
+    # filter(AvgCorticalThickness_lh != 0) %>%
+  mutate(SUBJ = SubjectID, Diagnostic = "CTL") %>%
+  dplyr::select(c(SUBJ, Age, Diagnostic))
+
+# AOMICPIOP1$Age <- as.double(AOMICPIOP1$age)
+# AOMICPIOP1 <- AOMICPIOP1 %>%
+#   mutate(Age = as.double(age),
+#          Diagnostic = "CTL",
+#          Sample = "AOMICPIOP1",
+#          SUBJ = participant_id) %>%
+#   dplyr::select(-c(age))
+#   
+# IDOR$Age <- as.double(IDOR$Age)
+# 
+# IDOR <- IDOR %>%
+#   filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
+#                           ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
+#                           Session == 1,
+#          Diagnostic == "CONTROLE" | Diagnostic == "ALZ" | Diagnostic == "CCL") %>% # use only data from Session 1
+#   droplevels() %>% # delete factor levels
+#   mutate(Sample = "IDOR")
+```
+
+```{r}
+dados_datasetscomp_alldata_ADNI <- filter(dados_datasetscomp_alldata, Sample == "ADNI")
+ADNI <- full_join(ADNIAD, ADNICTL)
+dados_datasetscomp_alldata_ADNI <- inner_join(dados_datasetscomp_alldata_ADNI, ADNI) %>%
+  unique()
+dados_datasetscomp_alldata <- dados_datasetscomp_alldata %>%
+  filter(Sample != "ADNI") %>%
+  full_join(dados_datasetscomp_alldata_ADNI)
+
+dados_raw <- full_join(dados_datasetscomp_alldata, AHEAD)
+# dados_raw <- full_join(IDOR, AOMICPIOP1) %>%
+#   full_join(AHEAD) %>%
+#   full_join(dados_wang)
+```
+
+```{r create new variables}
+# estimate cortical folding variables
+dados_raw <- dados_raw %>%
+  mutate(
+    # create new variables
+    logAvgThickness = log10(AvgThickness),
+    logTotalArea = log10(TotalArea),
+    logExposedArea = log10(ExposedArea),
+    localGI = TotalArea / ExposedArea,
+    k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
+    K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^
+                                                                                 2) ,
+    I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
+    c = as.double(ifelse(
+      ROI == "hemisphere", NA, 4 * pi / GaussianCurvature
+    )),
+    TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
+    ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
+    logTotalArea_corrected = log10(TotalArea_corrected),
+    logExposedArea_corrected = log10(ExposedArea_corrected),
+    localGI_corrected = ifelse(
+      ROI == "hemisphere",
+      TotalArea / ExposedArea,
+      TotalArea_corrected / ExposedArea_corrected
+    ),
+    k_corrected = ifelse(
+      ROI == "hemisphere",
+      sqrt(AvgThickness) * log10(TotalArea) / (log10(ExposedArea) ^ 1.25),
+      sqrt(AvgThickness) * log10(TotalArea_corrected) / (log10(ExposedArea_corrected ^
+                                                                 1.25))
+    ),
+    K_corrected =  ifelse(
+      ROI == "hemisphere",
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea_corrected) - 5 / 4 * log10(ExposedArea_corrected)
+    ),
+    I_corrected = ifelse(
+      ROI == "hemisphere",
+      log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2) ,
+      log10(TotalArea_corrected) + log10(ExposedArea_corrected) + log10(AvgThickness ^ 2)
+    ),
+    S_corrected = ifelse(
+      ROI == "hemisphere",
+      3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+      3 / 2 * log10(TotalArea_corrected) + 3 / 4 * log10(ExposedArea_corrected) - 9 /  4 * log10(AvgThickness ^ 2)
+    ),
+    Knorm = K_corrected / sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2),
+    Snorm = S_corrected / sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2),
+    Inorm = I_corrected / sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1)
+  )
+
+## Rename ROIs
+dados_raw$ROI[dados_raw$ROI == "X1" | dados_raw$ROI == "1"] <- "F"
+dados_raw$ROI[dados_raw$ROI == "X2" | dados_raw$ROI == "2"] <- "P"
+dados_raw$ROI[dados_raw$ROI == "X3" | dados_raw$ROI == "3"] <- "T"
+dados_raw$ROI[dados_raw$ROI == "X4" | dados_raw$ROI == "4"] <- "O"
+# dados_raw$nROI[dados_raw$nROI == "X5"] <- "Insula"
+
+dados_raw <- dados_raw %>%
+  filter(ROI == "F" | ROI == "P" | ROI == "T"| ROI == "O" | ROI == "hemisphere")
+
+# create age intervals
+dados_raw$Age_interval <- cut(dados_raw$Age,
+                                       breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100),
+                                       right = FALSE,
+                                       include.lowest = TRUE)
+
+dados_raw$Age_interval10 <- cut(dados_raw$Age,
+                                         breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+                                         right = FALSE,
+                                         include.lowest = TRUE)
+```
+
+```{r data cleanup}
+dados_all <- dados_raw %>% filter(
+  !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea), !is.na(Age), AvgThickness != 0) %>%
+  droplevels()
+
+dados <- dados_all
+```
+
+```{r}
+# rename diagnostics
+dados$Diagnostic[dados$Diagnostic == "CONTROLE"] <- "CTL"
+dados$Diagnostic[dados$Diagnostic == "ALZ"] <- "AD"
+dados$Diagnostic[dados$Diagnostic == "CCL"] <- "MCI"
+dados$Diagnostic <- factor(dados$Diagnostic, levels = c("AD", "MCI","CTL"))
+```
+
+```{r}
+dados_v1 <- filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere") %>%
+  droplevels()
+
+# lobe data
+dados_lobos_v1 <- unique(filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  SUBJ != "SUBJ211", SUBJ != "SUBJ223")) %>%
+  droplevels()
+
+# hemisphere data
+dados_hemi_v1 <- unique(filter(dados, ROI == "hemisphere"))
+```
+
+# Data description
+
+```{r N subj, echo=FALSE, message=FALSE, warning=FALSE}
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ)
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+
+dados_hemi_v1 %>%
+  group_by(Sample, Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
+    # ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2)),
+    T =  paste(signif(mean(AvgThickness), 2), "±", signif(sd(AvgThickness), 2)),
+    AT =  paste(signif(mean(TotalArea), 2), "±", signif(sd(TotalArea), 2)),
+    AE =  paste(signif(mean(ExposedArea), 2), "±", signif(sd(ExposedArea), 2)),
+    # k =  paste(signif(mean(k), 2), "±", signif(sd(k), 2)),
+    K =  paste(signif(mean(K), 2), "±", signif(sd(K), 2)),
+    S =  paste(signif(mean(S), 2), "±", signif(sd(S), 2)),
+    I =  paste(signif(mean(I), 2), "±", signif(sd(I), 2))
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+
+dados_hemi_v1 %>%
+  group_by(Sample, Diagnostic, Gender) %>%
+  summarise(
+    N = n_distinct(SUBJ)
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
+# Supplementary Note - Slope interpretation
+
+## Slope alpha IDOR
+
+```{r}
+lm_Age <-
+  filter(
+    dados_hemi_v1,
+    Diagnostic == "CTL",
+    Age_interval != "[40,45)",
+    Age_interval != "[80,85)",
+    Sample == "IDOR"
+  ) %>%
+  group_by(Age_interval) %>%
+  do(fit_Age = tidy(
+    lm(
+      1 / 2 * log10(AvgThickness) +  log10(TotalArea) ~  log10(ExposedArea),
+      data = .,
+      na.action = na.omit
+    ),
+    conf.int = TRUE
+  )) %>%
+  unnest(cols = c(fit_Age))
+
+N_subj <-
+  filter(
+    dados_hemi_v1,
+    Diagnostic == "CTL",
+    Age_interval != "[40,45)",
+    Age_interval != "[80,85)",
+    Sample == "IDOR"
+  ) %>%
+  group_by(Age_interval) %>%
+  summarise(N_SUBJ = n_distinct(SUBJ))
+
+fig1a <- ggplot(data = filter(lm_Age, term == "log10(ExposedArea)"),
+                aes(x = Age_interval,
+                    y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error)) +
+  geom_smooth(method = "lm", se = TRUE) +
+  geom_hline(yintercept = 1.25, linetype = "dashed") +
+  geom_text(aes(label = N_subj$N_SUBJ), nudge_y = 0.6) +
+  theme_pubr() +
+  labs(y = "Slope", x = "Age [years]") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(
+  "fig1a.pdf",
+  plot = fig1a,
+  dpi = 1200,
+  width = 8.7,
+  height = 11,
+  units = "cm",
+  device = "pdf"
+)
+```
+
+```{r figures10, fig.cap="\\label{fig:figures10}Age effect in cortical gyrification. Cortical folding model slope $\alpha$ within 5 years, only for Healthy Cognitive Unimpaired Controls. Above each point, we display the number of subjects in each regression. Bars represent the standard deviation for the respective age interval regression. Points with one subject were excluded due to the lack of statistical significance.", fig.height=4.33, fig.width=3.42}
+
+fig1a
+
+```
+
+## Slopes from all samples
+
+```{r}
+dados$Sample <- as.character(dados$Sample)
+
+dados$Sample[dados$Sample == "IDOR" &
+                                  dados$Diagnostic == "CTL"] <- "IDOR-Control"
+dados$Sample[dados$Sample == "IDOR" &
+                                  dados$Diagnostic == "AD"] <- "IDOR-AD"
+dados$Sample[dados$Sample == "IDOR" &
+                                  dados$Diagnostic == "MCI"] <- "IDOR-MCI"
+
+dados$Sample[dados$Sample == "HCP500r"] <- "HCP500r-Control"
+dados$Sample[dados$Sample == "OASIS"] <- "OASIS-Control"
+dados$Sample[dados$Sample == "AOMICPIOP1"] <- "AOMICPIOP1-Control"
+dados$Sample[dados$Sample == "AHEAD"] <- "AHEAD-Control"
+
+dados$Sample[dados$Sample == "NKI"] <- "NKI-Control"
+
+dados$Sample[dados$Sample == "ADNI" & dados$Diagnostic == "AD"] <- "ADNI-AD"
+dados$Sample[dados$Sample == "ADNI" & dados$Diagnostic == "CTL"] <- "ADNI-Control"
+```
+
+```{r}
+amostras_Coef <- filter(dados, ROI == "hemisphere") %>%
+  group_by(Sample) %>%
+  do(fit_amostras = tidy(
+    lm(
+      1 / 2 * logAvgThickness + logTotalArea ~ logExposedArea,
+      data = .,
+      na.action = na.omit
+    ),
+    conf.int = TRUE
+  )) %>%
+  unnest(fit_amostras) %>% filter(term == "logExposedArea")
+
+amostras_Coef_age <- filter(dados, ROI == "hemisphere") %>%
+  group_by(Sample) %>%
+  summarise(N = n_distinct(SUBJ),
+            min_age = min(Age),
+            max_age = max(Age))
+
+amostras_Coef <- full_join(amostras_Coef, amostras_Coef_age)
+
+figS3 <- ggplot(data = amostras_Coef,
+                aes(x = reorder(Sample, estimate),
+                    y = estimate,)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error)) +
+  geom_hline(yintercept = 1.25, linetype = "dashed") +
+  scale_x_discrete(
+    labels = paste(
+      amostras_Coef$Sample,
+      "\n",
+      amostras_Coef$N,
+      ", (",
+      signif(amostras_Coef$min_age, 2),
+      "-",
+      signif(amostras_Coef$max_age, 2),
+      ")"
+    )
+  ) +
+  theme_pubr() +
+  labs(y = "Slope", x = "Sample \n N, (age range)") +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 9
+    ),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  )
+
+ggsave(
+  "figS3.pdf",
+  plot = figS3,
+  dpi = 1200,
+  width = 17.8,
+  height = 12,
+  units = "cm",
+  device = "pdf"
+)
+
+```
+
+```{r figures3, fig.cap="\\label{fig:figures3}Slope for each sample with the number of subjects included and the age range. The traced line is for 1.25, the theoretical value of the slope alpha. Bars represents the standard deviation.", fig.height=4.72, fig.width=7}
+
+figS3
+
+```
+
+## Comparing IDOR and AOMICPIOP1
+
+```{r}
+Age_Coef_diag <-
+  filter(
+    dados,
+    ROI == "hemisphere",
+    Diagnostic == "CTL",
+    Sample == "AOMICPIOP1-Control" |
+      Sample == "IDOR-Control",
+    Age_interval != "80-85",
+    Age_interval != "40-45"
+  ) %>%
+  group_by(Sample, Age_interval) %>%
+  do(fit_Age_diag = tidy(
+    lm(
+      1 / 2 * logAvgThickness + logTotalArea ~ logExposedArea,
+      data = .,
+      na.action = na.omit
+    ),
+    conf.int = TRUE,
+    conf.level = 0.95
+  )) %>%
+  unnest(fit_Age_diag)
+
+# Age_Coef_diag
+
+N_subj_diag <-
+  filter(
+    dados,
+    ROI == "hemisphere",
+    Diagnostic == "CTL",
+    Sample == "AOMICPIOP1-Control" |
+      Sample == "IDOR-Control",
+    Age_interval != "80-85",
+    Age_interval != "40-45"
+  ) %>%
+  group_by(Sample, Age_interval) %>%
+  summarise(N_SUBJ = n_distinct(SUBJ))
+
+figS4a <- ggplot(
+  data = filter(Age_Coef_diag, term == "logExposedArea"),
+  aes(
+    x = Age_interval ,
+    y = estimate,
+    color = Sample,
+    fill = Sample)
+) +
+  geom_point() +
+  geom_line(aes(group = Sample)) +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error)) +
+  geom_text(aes(label = N_subj_diag$N_SUBJ), nudge_y = 0.5) +
+  geom_hline(yintercept = 1.25, linetype = "dashed") +
+  theme_pubr() +
+  labs(y = "Slope", x = "Age [years]")  +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 9
+    ),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2)
+# + labs(caption = paste("N = ", n_distinct(filter(dados, ROI == "hemisphere", Diagnostic == "CTL", Sample == "AOMICPIOP1-Control" | Sample == "IDOR-Control")$SUBJ)))
+
+figS4b <- ggplot(
+  filter(
+    dados,
+    ROI == "hemisphere",
+    Sample == "AOMICPIOP1-Control" |
+      Sample == "IDOR-Control",
+    Age_interval != "80-85",
+    Age_interval != "40-45"
+  ),
+  aes(
+    x = Age_interval ,
+    y = logAvgThickness,
+    color = Sample
+  )
+) +
+  geom_boxplot() +
+    geom_point(aes(fill = Sample, alpha = 0.2)) +
+  theme_pubr() +
+  labs(x = "Age [years]", y = expression("log"[10] * "T [mm]")) +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 9
+    ),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2)
+
+figS4c <- ggplot(
+  filter(
+    dados,
+    ROI == "hemisphere",
+    Sample == "AOMICPIOP1-Control" |
+      Sample == "IDOR-Control",
+    Age_interval != "80-85",
+    Age_interval != "40-45"
+  ),
+  aes(
+    x = Age_interval ,
+    y = K,
+    color = Sample
+  )
+) +
+  geom_boxplot() +
+      geom_point(aes(fill = Sample, alpha = 0.2)) +
+  theme_pubr() + labs(x = "Age [years]") +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 9
+    ),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2)
+
+figS4 <-
+  ggarrange(
+    figS4a,
+    figS4b,
+    figS4c,
+    labels = c("A", "B", "C"),
+    nrow = 1,
+    ncol = 3,
+    font.label = list(size = 11),
+    common.legend = TRUE,
+    legend = "top"
+  )
+
+ggsave(
+  "figS4.pdf",
+  dpi = 1200,
+  width = 17.8,
+  height = 9,
+  units = "cm",
+  device = "pdf"
+)
+
+```
+
+```{r figures4, fig.cap="\\label{fig:figures4}Plots comparing morphological variables behavior with Age. Red is for AOMICPIOP01-Control and blue for IDOR-Control. The x-axis is modified to hide the age interval from 30 to 40 years old that has none subjects, two data points with only one subject, 40-45 and 80-85. The total number of subjects included are 284. (A) Slope for each Age interval group and each sample. The number on top of the point indicates the number of subjects included in the linear regression, and each subject contributes with two data points, one for each hemisphere. The traced line is for 1.25, the theoretical value of the slope. Bars represents the standard deviation. (B) Log10(T) distribution for each Age interval group and each sample. Bars represents the 95% Confidence interval. (C) K distribution for each Age interval group and each sample. Bars represents the 95% Confidence interval.", fig.height=3.54, fig.width=7}
+
+figS4
+```
+
+## AHEAD-Control
+
+```{r}
+Age_Coef_diag <-
+  filter(dados, ROI == "hemisphere", Sample == "AHEAD-Control") %>%
+  group_by(Age_interval) %>%
+  do(fit_Age_diag = tidy(
+    lm(
+      1 / 2 * logAvgThickness + logTotalArea ~ logExposedArea,
+      data = .,
+      na.action = na.omit
+    ),
+    conf.int = TRUE
+  )) %>% unnest(fit_Age_diag)
+
+Age_Coef_diag
+
+N_subj_diag <-
+  filter(dados, ROI == "hemisphere", Sample == "AHEAD-Control") %>%
+  group_by(Age_interval) %>%
+  summarise(N_SUBJ = n_distinct(SUBJ))
+
+figS5 <-
+  ggplot(data = filter(Age_Coef_diag, term == "logExposedArea"),
+         aes(x = Age_interval ,
+             y = estimate)) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error)) +
+  geom_text(aes(label = N_subj_diag$N_SUBJ), nudge_y = 0.17) +
+  geom_hline(yintercept = 1.25, linetype = "dashed") +
+  theme_pubr() +
+  labs(y = "Slope", x = "Age [years]") +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 9
+    ),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2)
+
+ggsave(
+  "figS5.pdf",
+  dpi = 1200,
+  width = 11.4,
+  height = 11.4,
+  units = "cm",
+  device = "pdf"
+)
+```
+
+```{r figures5, fig.cap="\\label{fig:figures5}Slope for each Age interval group in AHEAD-Control. The number on top of the point indicates the number of subjects included in the linear regression, and each subject contributes with two data points, one for each hemisphere. The traced line is for 1.25, the theoretical value of the slope alpha. Bars represents the standard deviation.", fig.height=4.48, fig.width=4.48}
+
+figS5
+
+```
+
+## Controls
+
+```{r}
+figS6a <-
+  ggplot(filter(dados, ROI == "hemisphere", Diagnostic == "CTL"),
+         aes(x = Age, y = K, alpha = 0.2)) +
+  geom_point(aes(color = Sample, fill = Sample)) +
+  geom_smooth(color = "black", method = "lm") +
+  theme_pubr() +
+  guides(alpha = FALSE) +
+  labs(x = "Age [years]") +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_x_continuous(name = "Age",
+                     limits = c(0, 100),
+                     breaks = c(seq(0, 100, 25)))
+# +
+#   scale_fill_manual(values = cbbPalette2) +
+#   scale_colour_manual(values = cbbPalette2)
+
+cor.test(
+  filter(dados, ROI == "hemisphere", Diagnostic == "CTL")$K,
+  filter(dados, ROI == "hemisphere", Diagnostic == "CTL")$Age
+)
+
+figS6b <-
+  ggplot(filter(dados, ROI == "hemisphere", Diagnostic == "CTL"),
+         aes(x = Age, y = S, alpha = 0.2)) +
+  geom_point(aes(color = Sample, fill = Sample)) +
+  geom_smooth(color = "black", method = "lm") +
+  theme_pubr() +
+  guides(alpha = FALSE,
+         color = FALSE,
+         fill = FALSE) +
+  labs(x = "Age [years]") +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10),
+    legend.position = "none"
+  ) +
+  scale_x_continuous(name = "Age",
+                     limits = c(0, 100),
+                     breaks = c(seq(0, 100, 25)))
+# +
+#   scale_fill_manual(values = cbbPalette) +
+#   scale_colour_manual(values = cbbPalette)
+
+cor.test(
+  filter(dados, ROI == "hemisphere", Diagnostic == "CTL")$S,
+  filter(dados, ROI == "hemisphere",  Diagnostic == "CTL")$Age
+)
+
+figS6c <-
+  ggplot(filter(dados, ROI == "hemisphere", Diagnostic == "CTL"),
+         aes(x = Age, y = I, alpha = 0.2)) +
+  geom_point(aes(color = Sample, fill = Sample)) +
+  geom_smooth(color = "black", method = "lm") +
+  theme_pubr() +
+  guides(alpha = FALSE,
+         color = FALSE,
+         fill = FALSE) +
+  labs(x = "Age [years]") +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10),
+    legend.position = "none"
+  ) +
+  scale_x_continuous(name = "Age",
+                     limits = c(0, 100),
+                     breaks = c(seq(0, 100, 25)))
+# +
+#   scale_fill_manual(values = cbbPalette) +
+#   scale_colour_manual(values = cbbPalette)
+
+figS6 <-
+  ggarrange(
+    figS6a,
+    ggarrange(
+      figS6b,
+      figS6c,
+      labels = c("B", "C"),
+      nrow = 1,
+      ncol = 2,
+      font.label = list(size = 11)
+    ),
+    labels = c("A"),
+    nrow = 2,
+    ncol = 1,
+    font.label = list(size = 11),
+    common.legend = TRUE,
+    legend = "top"
+  )
+
+ggsave(
+  "figS6.pdf",
+  plot = figS6,
+  dpi = 1200,
+  width = 17.8,
+  height = 22,
+  units = "cm",
+  device = "pdf"
+)
+
+```
+
+```{r figures6, fig.cap="\\label{fig:figures6}Distribution of subjects for every Healthy Control subject across the independent morphological component through age. For HCP500r and AHEAD, the mean age of the interval was considered, since ages are determined by an interval of years, instead of one value for each subject. The solid line represents a linear regression applied for all data with the 95% confidence interval. (A) K, the tensor component, Pearson's r=-0.77, p<0.0001 (B) S, the shape component, Pearson's r=0.21, p<0.0001, and (C) I, the volume component, Pearson's r=-0.62, p<0.0001.", fig.height=8.66, fig.width=7}
+
+figS6
+
+```
