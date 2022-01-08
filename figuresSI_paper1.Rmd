@@ -136,8 +136,7 @@ figS6 <- ggarrange(figS6a, ggarrange(figS6b, figS6c,labels = c("B","C"), nrow = 
 figS6
 
 ggsave("figS6.pdf", plot = figS6, dpi=1200, width = 17.8, height = 22, units = "cm", device = "pdf")
-ggsave("figS6.jpeg", plot = figS6, dpi=1200, width = 17.8, height = 22, units = "cm", device = "jpeg")
-ggsave("figS6.eps", plot = figS6, dpi=1200, width = 17.8, height = 22, units = "cm", device = "eps")
+
 ```
 
 # AHEAD-Control
@@ -172,8 +171,6 @@ figS5 <- ggplot(
 figS5
 
 ggsave("figS5.pdf", dpi=1200, width = 11.4, height = 11.4, units = "cm", device = "pdf")
-ggsave("figS5.jpeg", dpi=1200, width = 11.4, height = 11.4, units = "cm", device = "jpeg")
-ggsave("figS5.eps", dpi=1200, width = 11.4, height = 11.4, units = "cm", device = "eps")
 ```
 
 # AOMICPIOP1-Control
@@ -251,8 +248,6 @@ figS4c
 figS4 <- ggarrange(figS4a, figS4b, figS4c, labels = c("A","B", "C"), nrow = 1, ncol = 3, font.label = list(size = 11), common.legend = TRUE, legend = "top")
 
 ggsave("figS4.pdf", dpi=1200, width = 17.8, height = 9, units = "cm", device = "pdf")
-ggsave("figS4.jpeg", dpi=1200, width = 17.8, height = 9, units = "cm", device = "jpeg")
-ggsave("figS4.eps", dpi=1200, width = 17.8, height = 9, units = "cm", device = "eps")
 
 ```
 
@@ -273,7 +268,6 @@ amostras_Coef_age <- filter(dados_datasetscomp, ROI == "hemisphere") %>%
 
 amostras_Coef <- full_join(amostras_Coef, amostras_Coef_age)
 
-
 figS3 <- ggplot(
   data = amostras_Coef,
   aes(
@@ -292,8 +286,6 @@ figS3 <- ggplot(
 figS3
 
 ggsave("figS3.pdf", plot = figS3, dpi=1200, width = 17.8, height = 12, units = "cm", device = "pdf")
-ggsave("figS3.jpeg", plot = figS3, dpi=1200, width = 17.8, height = 12, units = "cm", device = "jpeg")
-ggsave("figS3.eps", plot = figS3, dpi=1200, width = 17.8, height = 12, units = "cm", device = "eps")
 
 ```
 
