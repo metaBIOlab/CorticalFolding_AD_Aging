@@ -1,0 +1,1296 @@
+---
+title: "Manuscript 1 from Fernanda Hansen P. de Moraes Thesis - Cortical folding alterations in humans due to aging and diseases"
+author: "Fernanda Hansen Pacheco de Moraes"
+date: "1 dec 2021"
+output:
+  html_document: 
+    fig_caption: yes
+    fig_width: 8
+    number_sections: yes
+    theme: paper
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+Description of the procedures and analysis present in Manuscript 1,
+**Independent morphological correlates to aging, Mild Cognitive
+Impairment, and Alzheimer's Disease**, at the Doctorate Thesis presented
+to the Programa de Pós-Graduação em Ciências Médicas at the Instituto
+D'Or de Pesquisa e Ensino as a partial requirement to obtain the
+Doctorate Degree.
+
+Part of the data used here cannot be shared due to restrictions of the
+Ethic Committee. Data can be shared upon reasonable request to the
+corresponding author. To fulfill these limitation, we will generate
+random data to simulate the results.
+
+Get in touch with us
+([fernandahmoraes\@gmail.com](mailto:fernandahmoraes@gmail.com){.email})
+in case any help is needed, our aim is to improve the code as needed!
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE
+)
+```
+
+```{r working directory}
+setwd("~/GitHub/CorticalFolding_AD_Aging")
+```
+
+```{r functions, message=FALSE, warning=FALSE}
+## define functions
+
+# test angular coeficinet versus theoretical value
+test_coef <- function(reg, coefnum, val){
+  co <- coef(summary(reg))
+  tstat <- (co[coefnum,1] - val)/co[coefnum,2]
+  2 * pt(abs(tstat), reg$df.residual, lower.tail = FALSE)
+}
+
+# wrap text
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+```
+
+```{r call packages}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(ggpubr)
+library(kableExtra)
+library(broom)
+library(MASS)
+library(cutpointr)
+library(ggstatsplot)
+library(effects)
+library(compute.es)
+
+```
+
+```{r} 
+# COLOR BLIND PALETTE WITH BLACK
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette2 <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+
+# set seed for random process
+
+```{r}
+set.seed(1)
+```
+
+```{r import files}
+dados_raw <- read_csv("dados_raw.csv")
+```
+
+```{r create new variables}
+# estimate cortical folding variables
+dados_raw <- dados_raw %>%
+  mutate(
+    # create new variables
+    logAvgThickness = log10(AvgThickness),
+    logTotalArea = log10(TotalArea),
+    logExposedArea = log10(ExposedArea),
+    localGI = TotalArea / ExposedArea,
+    k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
+    K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^
+                                                                                 2) ,
+    I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
+    c = as.double(ifelse(
+      ROI == "hemisphere", NA, 4 * pi / GaussianCurvature
+    )),
+    TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
+    ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
+    logTotalArea_corrected = log10(TotalArea_corrected),
+    logExposedArea_corrected = log10(ExposedArea_corrected),
+    localGI_corrected = ifelse(
+      ROI == "hemisphere",
+      TotalArea / ExposedArea,
+      TotalArea_corrected / ExposedArea_corrected
+    ),
+    k_corrected = ifelse(
+      ROI == "hemisphere",
+      sqrt(AvgThickness) * log10(TotalArea) / (log10(ExposedArea) ^ 1.25),
+      sqrt(AvgThickness) * log10(TotalArea_corrected) / (log10(ExposedArea_corrected ^
+                                                                 1.25))
+    ),
+    K_corrected =  ifelse(
+      ROI == "hemisphere",
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea_corrected) - 5 / 4 * log10(ExposedArea_corrected)
+    ),
+    I_corrected = ifelse(
+      ROI == "hemisphere",
+      log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2) ,
+      log10(TotalArea_corrected) + log10(ExposedArea_corrected) + log10(AvgThickness ^ 2)
+    ),
+    S_corrected = ifelse(
+      ROI == "hemisphere",
+      3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+      3 / 2 * log10(TotalArea_corrected) + 3 / 4 * log10(ExposedArea_corrected) - 9 /  4 * log10(AvgThickness ^ 2)
+    ),
+    Knorm = K_corrected / sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2),
+    Snorm = S_corrected / sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2),
+    Inorm = I_corrected / sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1)
+  )
+
+# create age intervals
+dados_raw$Age_interval <- cut(dados_raw$Age,
+                                       breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100),
+                                       right = FALSE,
+                                       include.lowest = TRUE)
+
+dados_raw$Age_interval10 <- cut(dados_raw$Age,
+                                         breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+                                         right = FALSE,
+                                         include.lowest = TRUE)
+```
+
+```{r data cleanup}
+dados_all <- dados_raw %>% filter(
+    Diagnostic == "CONTROLE" |
+      Diagnostic == "CCL" |
+      Diagnostic == "ALZ", !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea)) %>% 
+  droplevels()
+
+dados <- dados_all
+```
+
+```{r}
+# rename diagnostics
+dados$Diagnostic[dados$Diagnostic == "CONTROLE"] <- "CTL"
+dados$Diagnostic[dados$Diagnostic == "ALZ"] <- "AD"
+dados$Diagnostic[dados$Diagnostic == "CCL"] <- "MCI"
+dados$Diagnostic <- factor(dados$Diagnostic, levels = c("AD", "MCI","CTL"))
+
+# filter data
+dados <- dados %>%
+  filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
+                          ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
+                          Session == 1) %>% # use only data from Session 1
+  droplevels() # delete factor levels
+
+```
+
+# Deaging
+
+```{r deaging}
+# define age for deaging
+Age.cor = 25
+
+## Avg thickness ----
+decay_AvgThickness <-
+  filter(
+    dados,
+    Diagnostic == "CTL",!is.na(TotalArea),!is.nan(TotalArea),!is.infinite(TotalArea)
+  ) %>%
+  droplevels() %>%
+  group_by(ROI) %>%
+  do(fit_decay_AvgThickness = tidy(rlm(AvgThickness ~ Age, data = .), conf.int =
+                                     TRUE)) %>%
+  unnest(cols = c(fit_decay_AvgThickness)) %>%
+  filter(term == "Age") %>%
+  mutate(c_AvgThickness = estimate,
+         std_error_c_AvgThickness = std.error) %>%
+  dplyr::select(c(ROI, c_AvgThickness, std_error_c_AvgThickness))
+
+## TotalArea ----
+decay_TotalArea <-
+  filter(
+    dados,
+    Diagnostic == "CTL",
+    !is.na(TotalArea),
+    !is.nan(TotalArea),
+    !is.infinite(TotalArea)
+  ) %>%
+  droplevels() %>%
+  group_by(ROI) %>%
+  do(fit_decay_TotalArea = tidy(rlm(TotalArea ~ Age, data = .), conf.int =
+                                  TRUE)) %>%
+  unnest(cols = c(fit_decay_TotalArea)) %>%
+  filter(term == "Age") %>%
+  mutate(c_TotalArea = estimate,
+         std_error_c_TotalArea = std.error) %>%
+  dplyr::select(c(ROI, c_TotalArea, std_error_c_TotalArea))
+
+## ExposedArea ----
+decay_ExposedArea <-
+  filter(
+    dados,
+    Diagnostic == "CTL",
+    !is.na(ExposedArea),
+    !is.nan(ExposedArea),
+    !is.infinite(ExposedArea)
+  ) %>%
+  droplevels() %>%
+  group_by(ROI) %>%
+  do(fit_decay_ExposedArea = tidy(rlm(ExposedArea ~ Age, data = .), conf.int = TRUE)) %>%
+  unnest(cols = c(fit_decay_ExposedArea)) %>%
+  filter(term == "Age") %>%
+  mutate(c_ExposedArea = estimate,
+         std_error_c_ExposedArea = std.error) %>%
+  dplyr::select(c(ROI, c_ExposedArea, std_error_c_ExposedArea))
+
+## join
+dados <- full_join(dados, decay_AvgThickness) %>%
+  full_join(decay_TotalArea) %>%
+  full_join(decay_ExposedArea) %>%
+  mutate(
+    AvgThickness_age_decay = AvgThickness - c_AvgThickness * (Age - Age.cor),
+    logAvgThickness_age_decay = log10(AvgThickness_age_decay),
+    TotalArea_age_decay = TotalArea - c_TotalArea * (Age - Age.cor),
+    logTotalArea_age_decay = log10(TotalArea_age_decay),
+    ExposedArea_age_decay = ExposedArea - c_ExposedArea * (Age - Age.cor),
+    logExposedArea_age_decay = log10(ExposedArea_age_decay),
+    K_age_decay = log10(TotalArea_age_decay) + 1/4*log10(AvgThickness_age_decay^2) - 5/4*log10(ExposedArea_age_decay),
+    I_age_decay = log10(TotalArea_age_decay) + log10(ExposedArea_age_decay) + log10(AvgThickness_age_decay^2),
+    S_age_decay = 3/2*log10(TotalArea_age_decay) + 3/4*log10(ExposedArea_age_decay) - 9/4*log10(AvgThickness_age_decay^2))
+
+dados$logAvgThickness <- as.double(dados$logAvgThickness)
+dados$logExposedArea <- as.double(dados$logExposedArea)
+dados$logTotalArea   <- as.double(dados$logTotalArea)
+
+```
+
+```{r}
+dados_v1 <- filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere") %>%
+  droplevels()
+
+# lobe data
+dados_lobos_v1 <- unique(filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  !is.na(K_age_decay), SUBJ != "SUBJ211", SUBJ != "SUBJ223")) %>%
+  droplevels()
+
+# hemisphere data
+dados_hemi_v1 <- unique(filter(dados, ROI == "hemisphere", !is.na(K_age_decay)))
+```
+
+# Data description
+
+```{r N subj, echo=FALSE, message=FALSE, warning=FALSE}
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
+    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2)),
+    T =  paste(signif(mean(AvgThickness), 2), "±", signif(sd(AvgThickness), 2)),
+    AT =  paste(signif(mean(TotalArea), 2), "±", signif(sd(TotalArea), 2)),
+    AE =  paste(signif(mean(ExposedArea), 2), "±", signif(sd(ExposedArea), 2)),
+    k =  paste(signif(mean(k), 2), "±", signif(sd(k), 2)),
+    K =  paste(signif(mean(K), 2), "±", signif(sd(K), 2)),
+    S =  paste(signif(mean(S), 2), "±", signif(sd(S), 2)),
+    I =  paste(signif(mean(I), 2), "±", signif(sd(I), 2))
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic, Gender) %>%
+  summarise(
+    N = n_distinct(SUBJ)
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
+# Extended Results
+
+## Diagnostic discrimination and prediction.
+
+**Figure S1**
+
+```{r}
+# K ----
+a <- aov(K ~ Diagnostic, data = dados_hemi_v1)
+summary(a)
+TukeyHSD(a)
+a.TukeyHSD <- as.data.frame(TukeyHSD(a)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a)$`Diagnostic`))
+a.TukeyHSD <- as_tibble(cbind(Contrasts, a.TukeyHSD))
+rownames(a.TukeyHSD) <- NULL
+colnames(a.TukeyHSD)[1] <- c("Contrast")
+a.TukeyHSD <- a.TukeyHSD %>% mutate(ROI = "Hemisphere", variable = "K", agecorrection = "no")
+
+a.F <- aov(K ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "F"))
+summary(a.F)
+TukeyHSD(a.F)
+a.F.TukeyHSD <- as.data.frame(TukeyHSD(a.F)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.F)$`Diagnostic`))
+a.F.TukeyHSD <- as_tibble(cbind(Contrasts, a.F.TukeyHSD))
+rownames(a.F.TukeyHSD) <- NULL
+colnames(a.F.TukeyHSD)[1] <- c("Contrast")
+a.F.TukeyHSD <- a.F.TukeyHSD %>% mutate(ROI = "Frontal Lobe", variable = "K", agecorrection = "no")
+
+a.O <- aov(K ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "O"))
+summary(a.O)
+TukeyHSD(a.O)
+a.O.TukeyHSD <- as.data.frame(TukeyHSD(a.O)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.O)$`Diagnostic`))
+a.O.TukeyHSD <- as_tibble(cbind(Contrasts, a.O.TukeyHSD))
+rownames(a.O.TukeyHSD) <- NULL
+colnames(a.O.TukeyHSD)[1] <- c("Contrast")
+a.O.TukeyHSD <- a.O.TukeyHSD %>% mutate(ROI = "Occipital Lobe", variable = "K", agecorrection = "no")
+
+a.P <- aov(K ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "P"))
+summary(a.P)
+TukeyHSD(a.P)
+a.P.TukeyHSD <- as.data.frame(TukeyHSD(a.P)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.P)$`Diagnostic`))
+a.P.TukeyHSD <- as_tibble(cbind(Contrasts, a.P.TukeyHSD))
+rownames(a.P.TukeyHSD) <- NULL
+colnames(a.P.TukeyHSD)[1] <- c("Contrast")
+a.P.TukeyHSD <- a.P.TukeyHSD %>% mutate(ROI = "Parietal Lobe", variable = "K", agecorrection = "no")
+
+a.T <- aov(K ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "T"))
+summary(a.T)
+TukeyHSD(a.T)
+a.T.TukeyHSD <- as.data.frame(TukeyHSD(a.T)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.T)$`Diagnostic`))
+a.T.TukeyHSD <- as_tibble(cbind(Contrasts, a.T.TukeyHSD))
+rownames(a.T.TukeyHSD) <- NULL
+colnames(a.T.TukeyHSD)[1] <- c("Contrast")
+a.T.TukeyHSD <- a.T.TukeyHSD %>% mutate(ROI = "Temporal Lobe", variable = "K", agecorrection = "no")
+
+aov_summary <- full_join(a.TukeyHSD, a.F.TukeyHSD) %>% full_join(a.O.TukeyHSD) %>% full_join(a.P.TukeyHSD) %>% full_join(a.T.TukeyHSD)
+```
+
+```{r}
+
+# K  age decay ----
+
+a <- aov(K_age_decay ~ Diagnostic, data = dados_hemi_v1)
+summary(a)
+TukeyHSD(a)
+a.TukeyHSD <- as.data.frame(TukeyHSD(a)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a)$`Diagnostic`))
+a.TukeyHSD <- as_tibble(cbind(Contrasts, a.TukeyHSD))
+rownames(a.TukeyHSD) <- NULL
+colnames(a.TukeyHSD)[1] <- c("Contrast")
+a.TukeyHSD <- a.TukeyHSD %>% mutate(ROI = "Hemisphere", variable = "K", agecorrection = "yes")
+
+a.F <- aov(K_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "F"))
+summary(a.F)
+TukeyHSD(a.F)
+a.F.TukeyHSD <- as.data.frame(TukeyHSD(a.F)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.F)$`Diagnostic`))
+a.F.TukeyHSD <- as_tibble(cbind(Contrasts, a.F.TukeyHSD))
+rownames(a.F.TukeyHSD) <- NULL
+colnames(a.F.TukeyHSD)[1] <- c("Contrast")
+a.F.TukeyHSD <- a.F.TukeyHSD %>% mutate(ROI = "Frontal Lobe", variable = "K", agecorrection = "yes")
+
+a.O <- aov(K_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "O"))
+summary(a.O)
+TukeyHSD(a.O)
+a.O.TukeyHSD <- as.data.frame(TukeyHSD(a.O)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.O)$`Diagnostic`))
+a.O.TukeyHSD <- as_tibble(cbind(Contrasts, a.O.TukeyHSD))
+rownames(a.O.TukeyHSD) <- NULL
+colnames(a.O.TukeyHSD)[1] <- c("Contrast")
+a.O.TukeyHSD <- a.O.TukeyHSD %>% mutate(ROI = "Occipital Lobe", variable = "K", agecorrection = "yes")
+
+a.P <- aov(K_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "P"))
+summary(a.P)
+TukeyHSD(a.P)
+a.P.TukeyHSD <- as.data.frame(TukeyHSD(a.P)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.P)$`Diagnostic`))
+a.P.TukeyHSD <- as_tibble(cbind(Contrasts, a.P.TukeyHSD))
+rownames(a.P.TukeyHSD) <- NULL
+colnames(a.P.TukeyHSD)[1] <- c("Contrast")
+a.P.TukeyHSD <- a.P.TukeyHSD %>% mutate(ROI = "Parietal Lobe", variable = "K", agecorrection = "yes")
+
+a.T <- aov(K_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "T"))
+summary(a.T)
+TukeyHSD(a.T)
+a.T.TukeyHSD <- as.data.frame(TukeyHSD(a.T)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.T)$`Diagnostic`))
+a.T.TukeyHSD <- as_tibble(cbind(Contrasts, a.T.TukeyHSD))
+rownames(a.T.TukeyHSD) <- NULL
+colnames(a.T.TukeyHSD)[1] <- c("Contrast")
+a.T.TukeyHSD <- a.T.TukeyHSD %>% mutate(ROI = "Temporal Lobe", variable = "K", agecorrection = "yes")
+
+aov_summary <- full_join(aov_summary, a.TukeyHSD) %>% full_join(a.F.TukeyHSD) %>% full_join(a.O.TukeyHSD) %>% full_join(a.P.TukeyHSD) %>% full_join(a.T.TukeyHSD)
+
+```
+
+```{r}
+# logAvgThickness ----
+
+a <- aov(logAvgThickness ~ Diagnostic, data = dados_hemi_v1)
+summary(a)
+a.TukeyHSD <- as.data.frame(TukeyHSD(a)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a)$`Diagnostic`))
+a.TukeyHSD <- as_tibble(cbind(Contrasts, a.TukeyHSD))
+rownames(a.TukeyHSD) <- NULL
+colnames(a.TukeyHSD)[1] <- c("Contrast")
+a.TukeyHSD <- a.TukeyHSD %>% mutate(ROI = "Hemisphere", variable = "log[10]T", agecorrection = "no")
+
+a.F <- aov(logAvgThickness ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "F"))
+summary(a.F)
+a.F.TukeyHSD <- as.data.frame(TukeyHSD(a.F)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.F)$`Diagnostic`))
+a.F.TukeyHSD <- as_tibble(cbind(Contrasts, a.F.TukeyHSD))
+rownames(a.F.TukeyHSD) <- NULL
+colnames(a.F.TukeyHSD)[1] <- c("Contrast")
+a.F.TukeyHSD <- a.F.TukeyHSD %>% mutate(ROI = "Frontal Lobe", variable = "log[10]T", agecorrection = "no")
+
+a.O <- aov(logAvgThickness ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "O"))
+summary(a.O)
+a.O.TukeyHSD <- as.data.frame(TukeyHSD(a.O)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.O)$`Diagnostic`))
+a.O.TukeyHSD <- as_tibble(cbind(Contrasts, a.O.TukeyHSD))
+rownames(a.O.TukeyHSD) <- NULL
+colnames(a.O.TukeyHSD)[1] <- c("Contrast")
+a.O.TukeyHSD <- a.O.TukeyHSD %>% mutate(ROI = "Occipital Lobe", variable = "log[10]T", agecorrection = "no")
+
+a.P <- aov(logAvgThickness ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "P"))
+summary(a.P)
+a.P.TukeyHSD <- as.data.frame(TukeyHSD(a.P)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.P)$`Diagnostic`))
+a.P.TukeyHSD <- as_tibble(cbind(Contrasts, a.P.TukeyHSD))
+rownames(a.P.TukeyHSD) <- NULL
+colnames(a.P.TukeyHSD)[1] <- c("Contrast")
+a.P.TukeyHSD <- a.P.TukeyHSD %>% mutate(ROI = "Parietal Lobe", variable = "log[10]T", agecorrection = "no")
+
+a.T <- aov(logAvgThickness ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "T"))
+summary(a.T)
+a.T.TukeyHSD <- as.data.frame(TukeyHSD(a.T)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.T)$`Diagnostic`))
+a.T.TukeyHSD <- as_tibble(cbind(Contrasts, a.T.TukeyHSD))
+rownames(a.T.TukeyHSD) <- NULL
+colnames(a.T.TukeyHSD)[1] <- c("Contrast")
+a.T.TukeyHSD <- a.T.TukeyHSD %>% mutate(ROI = "Temporal Lobe", variable = "log[10]T", agecorrection = "no")
+
+aov_summary <- full_join(aov_summary, a.TukeyHSD) %>% full_join(a.F.TukeyHSD) %>% full_join(a.O.TukeyHSD) %>% full_join(a.P.TukeyHSD) %>% full_join(a.T.TukeyHSD)
+
+```
+
+```{r}
+# logAvgThickness  age decay ----
+
+a <- aov(logAvgThickness_age_decay ~ Diagnostic, data = dados_hemi_v1)
+summary(a)
+a.TukeyHSD <- as.data.frame(TukeyHSD(a)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a)$`Diagnostic`))
+a.TukeyHSD <- as_tibble(cbind(Contrasts, a.TukeyHSD))
+rownames(a.TukeyHSD) <- NULL
+colnames(a.TukeyHSD)[1] <- c("Contrast")
+a.TukeyHSD <- a.TukeyHSD %>% mutate(ROI = "Hemisphere", variable = "log[10]T", agecorrection = "yes")
+
+a.F <- aov(logAvgThickness_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "F"))
+summary(a.F)
+a.F.TukeyHSD <- as.data.frame(TukeyHSD(a.F)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.F)$`Diagnostic`))
+a.F.TukeyHSD <- as_tibble(cbind(Contrasts, a.F.TukeyHSD))
+rownames(a.F.TukeyHSD) <- NULL
+colnames(a.F.TukeyHSD)[1] <- c("Contrast")
+a.F.TukeyHSD <- a.F.TukeyHSD %>% mutate(ROI = "Frontal Lobe", variable = "log[10]T", agecorrection = "yes")
+
+a.O <- aov(logAvgThickness_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "O"))
+summary(a.O)
+a.O.TukeyHSD <- as.data.frame(TukeyHSD(a.O)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.O)$`Diagnostic`))
+a.O.TukeyHSD <- as_tibble(cbind(Contrasts, a.O.TukeyHSD))
+rownames(a.O.TukeyHSD) <- NULL
+colnames(a.O.TukeyHSD)[1] <- c("Contrast")
+a.O.TukeyHSD <- a.O.TukeyHSD %>% mutate(ROI = "Occipital Lobe", variable = "log[10]T", agecorrection = "yes")
+
+a.P <- aov(logAvgThickness_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "P"))
+summary(a.P)
+a.P.TukeyHSD <- as.data.frame(TukeyHSD(a.P)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.P)$`Diagnostic`))
+a.P.TukeyHSD <- as_tibble(cbind(Contrasts, a.P.TukeyHSD))
+rownames(a.P.TukeyHSD) <- NULL
+colnames(a.P.TukeyHSD)[1] <- c("Contrast")
+a.P.TukeyHSD <- a.P.TukeyHSD %>% mutate(ROI = "Parietal Lobe", variable = "log[10]T", agecorrection = "yes")
+
+a.T <- aov(logAvgThickness_age_decay ~ Diagnostic, data = filter(dados_lobos_v1, ROI == "T"))
+summary(a.T)
+a.T.TukeyHSD <- as.data.frame(TukeyHSD(a.T)$`Diagnostic`)
+Contrasts <- as.data.frame(rownames(TukeyHSD(a.T)$`Diagnostic`))
+a.T.TukeyHSD <- as_tibble(cbind(Contrasts, a.T.TukeyHSD))
+rownames(a.T.TukeyHSD) <- NULL
+colnames(a.T.TukeyHSD)[1] <- c("Contrast")
+a.T.TukeyHSD <- a.T.TukeyHSD %>% mutate(ROI = "Temporal Lobe", variable = "log[10]T", agecorrection = "yes")
+
+```
+
+```{r}
+# ----
+aov_summary <- full_join(aov_summary, a.TukeyHSD) %>% full_join(a.F.TukeyHSD) %>% full_join(a.O.TukeyHSD) %>% full_join(a.P.TukeyHSD) %>% full_join(a.T.TukeyHSD)
+
+agecorrection <- c(
+  "no" = "Raw data",
+  "yes" = "After age correction"
+)
+```
+
+```{r}
+figs1 <- ggplot(data = filter(aov_summary, `p adj` < 0.05 | `p adj` == 0.05), aes(
+  x = reorder(ROI, desc(ROI)),
+  y = diff,
+  ymin = lwr,
+  ymax = upr, color = Contrast)) +
+  geom_hline(yintercept = 0,
+             linetype = "11",
+             colour = "grey60") +
+  geom_pointrange( position = position_dodge(width = 0.3)) +
+  #  geom_text(aes(label = str_c("p adj = ", signif(`p adj`, digits = 2))), nudge_x = 0.3) +
+  coord_flip() + 
+  labs(y =  "Differences in mean levels of Diagnostic", x = "ROI") + facet_grid(variable ~ agecorrection, labeller = labeller(agecorrection = agecorrection)) +
+  theme_pubr() + 
+  theme(axis.title = element_text(size = 11),
+        axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggsave(
+  "figs1.pdf",
+  plot = figs1,
+  dpi = 1200,
+  width = 14,
+  height = 11,
+  units = "cm",
+  device = "pdf"
+)
+```
+
+```{r figureS1, fig.cap="\\label{fig:figureS1}Statistically significant (p<0.05) differences in mean levels with the 95% Confidence Interval of Diagnostics for K and log(AvgThickness), with (After age correction) and without (Raw data) age correction for the hemisphere and the four lobes. Multiple corrections were applied within each morphological feature and ROI.", fig.height=4.33, fig.width=5.51}
+figs1
+```
+
+```{r}
+NSUBJ <-
+  dados %>% group_by(Diagnostic, ROI, Age_interval10) %>% summarise(N = n_distinct(SUBJ))
+
+a <- aov(K ~ Diagnostic * ROI * Age_interval10, data = dados)
+a
+summary(a)
+a.TukeyHSD <-
+  as.data.frame(TukeyHSD(a)$`Diagnostic:ROI:Age_interval10`)
+Contrasts <-
+  as.data.frame(rownames(TukeyHSD(a)$`Diagnostic:ROI:Age_interval10`))
+a.TukeyHSD <- as_tibble(cbind(Contrasts, a.TukeyHSD))
+rownames(a.TukeyHSD) <- NULL
+colnames(a.TukeyHSD)[1] <- c("Contrast")
+a.TukeyHSD <- a.TukeyHSD %>%
+  mutate(
+    Contrast1 = str_split(a.TukeyHSD$Contrast, pattern = "-", simplify = TRUE)[, 1],
+    Contrast2 = str_split(a.TukeyHSD$Contrast, pattern = "-", simplify = TRUE)[, 2]
+  )
+a.TukeyHSD <- a.TukeyHSD %>%
+  mutate(
+    Diagnostic.1 = str_split(
+      a.TukeyHSD$Contrast1,
+      pattern = ":",
+      simplify = TRUE
+    )[, 1],
+    Diagnostic.2 = str_split(
+      a.TukeyHSD$Contrast2,
+      pattern = ":",
+      simplify = TRUE
+    )[, 1],
+    ROI.1 = str_split(
+      a.TukeyHSD$Contrast1,
+      pattern = ":",
+      simplify = TRUE
+    )[, 2],
+    ROI.2 = str_split(
+      a.TukeyHSD$Contrast2,
+      pattern = ":",
+      simplify = TRUE
+    )[, 2],
+    Age.1 = str_split(
+      a.TukeyHSD$Contrast1,
+      pattern = ":",
+      simplify = TRUE
+    )[, 3],
+    Age.2 = str_split(
+      a.TukeyHSD$Contrast2,
+      pattern = ":",
+      simplify = TRUE
+    )[, 3],
+    Contrasts = str_c(Diagnostic.1, Diagnostic.2, sep = "-")
+  ) %>% filter(ROI.1 == ROI.2 &
+                 Age.1 == Age.2) %>% dplyr::select(-c(Contrast1 , Contrast2))
+
+a.TukeyHSD$ROI.1 <- as.factor(a.TukeyHSD$ROI.1)
+a.TukeyHSD$ROI.1 <- relevel(a.TukeyHSD$ROI.1, ref = "hemisphere")
+
+figs2a <- ggplot(data = a.TukeyHSD, aes(
+  x = Age.1,
+  y = diff,
+  ymin = lwr,
+  ymax = upr,
+  color = ROI.1
+)) +
+  geom_hline(yintercept = 0,
+             linetype = "11",
+             colour = "grey60") +
+  geom_pointrange() + geom_line(aes(group = ROI.1)) + facet_wrap(Contrasts ~ .) +
+  labs(y =  "Differences in mean of K", x = "Age [years]", color = "ROI") +
+  theme_pubr() +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust=1)
+  ) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+
+a <- aov(K_age_decay ~ Diagnostic * ROI * Age_interval10, data = dados)
+a
+summary(a)
+a.TukeyHSD <-
+  as.data.frame(TukeyHSD(a)$`Diagnostic:ROI:Age_interval10`)
+Contrasts <-
+  as.data.frame(rownames(TukeyHSD(a)$`Diagnostic:ROI:Age_interval10`))
+a.TukeyHSD <- as_tibble(cbind(Contrasts, a.TukeyHSD))
+rownames(a.TukeyHSD) <- NULL
+colnames(a.TukeyHSD)[1] <- c("Contrast")
+a.TukeyHSD <- a.TukeyHSD %>%
+  mutate(
+    Contrast1 = str_split(a.TukeyHSD$Contrast, pattern = "-", simplify = TRUE)[, 1],
+    Contrast2 = str_split(a.TukeyHSD$Contrast, pattern = "-", simplify = TRUE)[, 2]
+  )
+a.TukeyHSD <- a.TukeyHSD %>%
+  mutate(
+    Diagnostic.1 = str_split(
+      a.TukeyHSD$Contrast1,
+      pattern = ":",
+      simplify = TRUE
+    )[, 1],
+    Diagnostic.2 = str_split(
+      a.TukeyHSD$Contrast2,
+      pattern = ":",
+      simplify = TRUE
+    )[, 1],
+    ROI.1 = str_split(
+      a.TukeyHSD$Contrast1,
+      pattern = ":",
+      simplify = TRUE
+    )[, 2],
+    ROI.2 = str_split(
+      a.TukeyHSD$Contrast2,
+      pattern = ":",
+      simplify = TRUE
+    )[, 2],
+    Age.1 = str_split(
+      a.TukeyHSD$Contrast1,
+      pattern = ":",
+      simplify = TRUE
+    )[, 3],
+    Age.2 = str_split(
+      a.TukeyHSD$Contrast2,
+      pattern = ":",
+      simplify = TRUE
+    )[, 3],
+    Contrasts = str_c(Diagnostic.1, Diagnostic.2, sep = "-")
+  ) %>% filter(ROI.1 == ROI.2 &
+                 Age.1 == Age.2) %>% dplyr::select(-c(Contrast1 , Contrast2))
+
+a.TukeyHSD$ROI.1 <- as.factor(a.TukeyHSD$ROI.1)
+a.TukeyHSD$ROI.1 <- relevel(a.TukeyHSD$ROI.1, ref = "hemisphere")
+
+figs2b <- ggplot(data = a.TukeyHSD, aes(
+  x = Age.1,
+  y = diff,
+  ymin = lwr,
+  ymax = upr,
+  color = ROI.1
+)) +
+  geom_hline(yintercept = 0,
+             linetype = "11",
+             colour = "grey60") +
+  geom_pointrange() + geom_line(aes(group = ROI.1)) + facet_wrap(Contrasts ~ .) +
+  labs(y =  "Differences in mean of K (age corrected)", x = "Age [years]", color = "ROI") +
+  theme_pubr() +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust=1)
+  ) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+figs2 <-
+  ggarrange(
+    figs2a,
+    figs2b,
+    labels = c("A", "B"),
+    common.legend = TRUE,
+    legend = "top",
+    nrow = 2,
+    ncol = 1,
+    font.label = list(size = 11)
+  )
+
+ggsave(
+  "figs2.pdf",
+  plot = figs2,
+  dpi = 1200,
+  width = 17.8,
+  height = 22,
+  units = "cm",
+  device = "pdf"
+)
+
+```
+
+**Figure S2**
+
+```{r figureS2, fig.cap="\\label{fig:figureS2}Difference of means in pairwise comparison for AD-CTL, AD-MCI, and MCI-CTL in grouped by age in decades in each ROI for (A) K and (B) K after age correction. Bars represents 95% confidence interval. There is no statistical power, probably influenced by the small number of observations in each data point, to infer that the difference between diagnostics is more significant in younger adults.", fig.height=8.66, fig.width=7}
+
+figs2
+```
+
+## Optimal cut-off for K
+
+```{r}
+cpK <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+        K,
+        Diagnostic,
+        pos_class = "AD",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpK)
+```
+
+```{r}
+cpK_MCI <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+        K,
+        Diagnostic,
+        pos_class = "MCI",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpK_MCI)
+```
+
+### Lobes
+
+```{r}
+dados_lobos_v1$subgroup <- dados_lobos_v1$ROI
+```
+
+```{r}
+cpK <-
+  cutpointr(
+    filter(dados_lobos_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+    K_corrected,
+    Diagnostic,
+    ROI,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
+summary(cpK)
+```
+
+```{r}
+cpK_MCI <-
+  cutpointr(
+    filter(dados_lobos_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+    K_corrected,
+    Diagnostic,
+    ROI,
+    pos_class = "MCI",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
+summary(cpK_MCI)
+```
+
+```{r}
+fig_cutpoint_lobes <-
+  ggplot(dados_lobos_v1,
+         aes(
+           x = K_corrected,
+           color = Diagnostic,
+           fill = Diagnostic,
+           alpha = 0.4
+         )) +
+  geom_density() +
+  geom_vline(data = cpK,
+             aes(
+               xintercept = optimal_cutpoint,
+               linetype = "dashed",
+               group = subgroup
+             )) +
+  geom_vline(data = cpK_MCI,
+             aes(
+               xintercept = optimal_cutpoint,
+               linetype = "dotted",
+               group = subgroup
+             )) +
+  theme_pubr() +
+  guides(alpha = "none", linetype = "none") +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  facet_grid(subgroup ~ .) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+```
+
+```{r}
+fig_cutpoint_lobes
+```
+
+## Behavioral and CSF data correlation
+
+```{r clinical data summary, messAge=FALSE, warning=FALSE}
+#hemisphere
+dados_hemi_v1_CD <- dados_hemi_v1 %>%
+  pivot_longer(
+    c(
+      COGNITIVE_INDEX,
+      `A7/A5`,
+      `TMT B-A`,
+      `DIGIT SPAN BACK`,
+      `AB1-40`,
+      `AB1-42`,
+      TAU,
+      AB1_ratio,
+      TAU_AB1_42_ratio,
+      TAU_AB1_ratio,
+      Lipoxina
+    ),
+    names_to = "clinical_test",
+    values_to = "clinical_test_value"
+  ) %>%
+  pivot_longer(
+    c(K, K_age_decay, logAvgThickness, logAvgThickness_age_decay),
+    names_to = "morphological_parameter",
+    values_to = "morphological_parameter_value")
+
+dados_hemi_v1_CD_behaviour <-
+  unique(
+    filter(
+      dados_hemi_v1_CD,
+      clinical_test == "A7/A5" |
+        clinical_test == "COGNITIVE_INDEX" |
+        clinical_test == "TMT B-A" | clinical_test == "DIGIT SPAN BACK"
+    )
+  )
+
+dados_hemi_v1_CD_biochq <-
+  unique(
+    filter(
+      dados_hemi_v1_CD,
+      clinical_test == "AB1-40" |
+        clinical_test == "AB1-42" |
+        clinical_test == "TAU" |
+        clinical_test == "AB1_ratio" |
+        clinical_test == "TAU_AB1_42_ratio" |
+        clinical_test == "TAU_AB1_ratio" | clinical_test == "Lipoxina"
+    )
+  )
+```
+
+```{r}
+#frontal lobe
+dados_lobos_v1_F_CD_behaviour <- filter(dados_lobos_v1, ROI == "F") %>%
+  pivot_longer(
+    c(
+      `TMT B-A`,
+      `DIGIT SPAN BACK`
+    ),
+    names_to = "clinical_test",
+    values_to = "clinical_test_value"
+  ) %>%
+  pivot_longer(
+    c(
+      K_corrected,
+      K_age_decay,
+      logAvgThickness,
+      logAvgThickness_age_decay
+    ),
+    names_to = "morphological_parameter",
+    values_to = "morphological_parameter_value"
+  )
+```
+
+```{r}
+#temporal lobe
+dados_lobos_v1_T_CD_behaviour <- filter(dados_lobos_v1, ROI == "T") %>%
+  pivot_longer(
+    c(
+      `A7/A5`,
+    ),
+    names_to = "clinical_test",
+    values_to = "clinical_test_value"
+  ) %>%
+  pivot_longer(
+    c(
+      K_corrected,
+      K_age_decay,
+      logAvgThickness,
+      logAvgThickness_age_decay
+    ),
+    names_to = "morphological_parameter",
+    values_to = "morphological_parameter_value"
+  )
+```
+
+### Summary
+```{r}
+dados_hemi_v1 %>%
+group_by(Diagnostic) %>%
+summarise(
+N = n_distinct(SUBJ),
+Mean_COGNITIVE_INDEX = mean(COGNITIVE_INDEX,  na.rm = TRUE),
+STD_COGNITIVE_INDEX = sd(COGNITIVE_INDEX,  na.rm = TRUE),
+Mean_A7_A5 = mean(`A7/A5`,  na.rm = TRUE),
+STD_A7_A5 = sd(`A7/A5`,  na.rm = TRUE),
+Mean_TMT_B_A = mean(`TMT B-A`,  na.rm = TRUE),
+STD_TMT_B_A = sd(`TMT B-A`,  na.rm = TRUE),
+Mean_DIGIT_SPAN_BACK = mean(`DIGIT SPAN BACK`,  na.rm = TRUE),
+STD_DIGIT_SPAN_BACK = sd(`DIGIT SPAN BACK`,  na.rm = TRUE),
+Mean_Lipoxina = mean(Lipoxina ,  na.rm = TRUE),
+STD_Lipoxina = sd(Lipoxina ,  na.rm = TRUE),
+Mean_AB1_40 = mean(`AB1-40`,  na.rm = TRUE),
+STD_AB1_40 = sd(`AB1-40`,  na.rm = TRUE),
+Mean_AB1_42 = mean(`AB1-42`,  na.rm = TRUE),
+STD_AB1_42 = sd(`AB1-42`,  na.rm = TRUE),
+Mean_TAU = mean(TAU,  na.rm = TRUE),
+STD_TAU = sd(TAU,  na.rm = TRUE)) %>%
+  kable(digits = 2) %>%
+  kable_styling() %>%
+  column_spec(1, width = "10cm")
+```
+
+```{r}
+dados_hemi_v1_CD %>%
+group_by(clinical_test, Diagnostic) %>%
+summarise(
+N = n_distinct(SUBJ),
+Mean = mean(clinical_test_value,  na.rm = TRUE),
+STD = sd(clinical_test_value,  na.rm = TRUE)) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
+### Hemisphere
+
+```{r, echo=FALSE}
+
+Corr1 <- dados_hemi_v1_CD_behaviour %>%
+  group_by(morphological_parameter, clinical_test) %>%
+  summarise(
+    t = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$statistic,
+      2
+    ),
+    df =  signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$parameter,
+      2
+    ),
+    Correlation = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$estimate,
+      2
+    ),
+    pvalue = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$p.value,
+      4
+    )
+    ,
+    eff.size = signif(
+      res(
+        Correlation,
+        var.r = NULL,
+        (df + 2) / 2,
+        level = 95,
+        dig = 2,
+        verbose = FALSE
+      )$d,
+      2
+    )
+  ) %>%
+  mutate(
+    Diagnostic = "All",
+    ROI = "Hemisphere",
+    kind = "behaviour",
+    Age_correction = ifelse(
+      str_detect(morphological_parameter, "_age_decay", negate = FALSE),
+      "yes",
+      "no"
+    )
+  ) 
+```
+
+```{r}
+Corr2 <- dados_hemi_v1_CD_biochq %>%
+  group_by(morphological_parameter, clinical_test) %>%
+  summarise(
+    t = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$statistic,
+      2
+    ),
+    df =  signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$parameter,
+      2
+    ),
+    Correlation = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$estimate,
+      2
+    ),
+    pvalue = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$p.value,
+      4
+    )
+    ,
+    eff.size = signif(
+      res(
+        Correlation,
+        var.r = NULL,
+        (df + 2) / 2,
+        level = 95,
+        dig = 2,
+        verbose = FALSE
+      )$d,
+      2
+    )
+  ) %>%
+  mutate(
+    Diagnostic = "All",
+    ROI = "Hemisphere",
+    kind = "behaviour",
+    Age_correction = ifelse(
+      str_detect(morphological_parameter, "_age_decay", negate = FALSE),
+      "yes",
+      "no"
+    )
+  )
+
+
+```
+
+### Frontal
+
+```{r,include=FALSE}
+
+Corr3 <- dados_lobos_v1_F_CD_behaviour %>%
+  group_by(morphological_parameter, clinical_test) %>%
+  summarise(
+    t = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$statistic,
+      2
+    ),
+    df =  signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$parameter,
+      2
+    ),
+    Correlation = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$estimate,
+      2
+    ),
+    pvalue = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$p.value,
+      4
+    )
+    ,
+    eff.size = signif(
+      res(
+        Correlation,
+        var.r = NULL,
+        (df + 2) / 2,
+        level = 95,
+        dig = 2,
+        verbose = FALSE
+      )$d,
+      2
+    )
+  ) %>%
+  mutate(
+    Diagnostic = "All",
+    ROI = "Frontal lobe",
+    kind = "behaviour",
+    Age_correction = ifelse(
+      str_detect(morphological_parameter, "_age_decay", negate = FALSE),
+      "yes",
+      "no"
+    )
+  )
+```
+
+### Temporal
+
+```{r,include=FALSE}
+Corr4 <- dados_lobos_v1_T_CD_behaviour %>%
+  group_by(morphological_parameter, clinical_test) %>%
+  summarise(
+    t = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$statistic,
+      2
+    ),
+    df =  signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$parameter,
+      2
+    ),
+    Correlation = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$estimate,
+      2
+    ),
+    pvalue = signif(
+      cor.test(
+        morphological_parameter_value,
+        clinical_test_value,
+        use = "complete",
+        method = "pearson"
+      )$p.value,
+      4
+    )
+    ,
+    eff.size = signif(
+      res(
+        Correlation,
+        var.r = NULL,
+        (df + 2) / 2,
+        level = 95,
+        dig = 2,
+        verbose = FALSE
+      )$d,
+      2
+    )
+  ) %>%
+  mutate(
+    Diagnostic = "All",
+    ROI = "Temporal lobe",
+    kind = "behaviour",
+    Age_correction = ifelse(
+      str_detect(morphological_parameter, "_age_decay", negate = FALSE),
+      "yes",
+      "no"
+    )
+  )
+
+```
+
+```{r}
+Corr_all <- full_join(Corr1, Corr2) %>%
+  full_join(Corr3) %>%
+  full_join(Corr4)
+
+Corr_all$morphological_parameter[Corr_all$morphological_parameter == "K_corrected"] <- "K"
+Corr_all$morphological_parameter[Corr_all$morphological_parameter == "K_age_decay"] <- "K"
+Corr_all$morphological_parameter[Corr_all$morphological_parameter == "logAvgThickness_age_decay"] <- "logAvgThickness"
+
+Corr_all <- Corr_all %>%
+  group_by(morphological_parameter, clinical_test) %>%
+  mutate(pval.adj = p.adjust(pvalue, method = 'bonferroni'))
+```
+
+```{r echo=FALSE, warning=TRUE}
+Corr_all %>%
+  # dplyr::select(-c(pvalue)) %>%
+  kable(digits = 3) %>%
+  kable_styling()
+
+```
