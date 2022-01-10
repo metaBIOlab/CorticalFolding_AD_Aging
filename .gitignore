@@ -5,3 +5,7 @@
 *.csv
 *.rdb
 *.xls
+*_cache/*
+*_files/*
+*_cache
+*_files
