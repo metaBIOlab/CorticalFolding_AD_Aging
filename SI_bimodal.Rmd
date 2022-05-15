@@ -315,6 +315,8 @@ fig_K_spread <-  ggplot(dados_adlevel, aes(x = K_corrected, color = Diagnostic, 
   scale_colour_manual(values=cbbPalette2)
 
 ggsave("fig_K_spread.pdf", plot= fig_K_spread, dpi=1200, width = 17.4, height = 22, units = "cm", device = "pdf")
+
+ggsave("fig_K_spread.png", plot= fig_K_spread, dpi=1200, width = 17.4, height = 22, units = "cm", device = "png")
 ```
 
 ```{r figureS8, fig.cap="\\label{fig:figureS9}K density plots across hemisphere and lobes. AD as red, MCI as green, and CTL as blue. In the first column, all AD subjects were included, along with all MCI and CTL subjects. The second column display results only for AD subjects with hemispherical K~\textless{}~-0.54, and MCI and CTL subjects. Finally, all AD subjects with hemispherical K>-0.54 or K=-0.54 with MCI and CTL subjects.", fig.height=8.66, fig.width=6.85}
@@ -371,6 +373,7 @@ cpk_roc_b <- plot_roc(cpK) +
 cpk_roc <- ggarrange(cpk_roc_a, cpk_roc_b, labels = c("A","B"), nrow = 1, ncol = 2, font.label = list(size = 11), common.legend = TRUE, legend = "top")
 ggsave("fig_roc_highAD.pdf", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "pdf")
 
+ggsave("fig_roc_highAD.png", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "png")
 ```
 
 ```{r figureS9, fig.cap="\\label{fig:figureS9}ROC curves derived from the optimal cut-off analysis of K (hemisphere as ROI) to discriminate CTL and AD subjects. (A) All AD subjects included and optimal cut-off=-0.54. (B) AD subjects included if hemispherical K<-0.54, optimal cut-off=-0.55.", fig.height=4.33, fig.width=6.85}

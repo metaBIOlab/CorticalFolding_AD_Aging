@@ -40,7 +40,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/CorticalFolding_AD_Aging")
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -68,6 +68,9 @@ library(MASS)
 library(cutpointr)
 library(ggstatsplot)
 library(effects)
+library(car)
+# library(multcomp)
+library(emmeans)
 
 ```
 
@@ -86,7 +89,9 @@ set.seed(1)
 ```{r import files}
 dados_raw <- read_csv("dados_raw.csv")
 ```
+
 # DATA PREPARATION
+
 ```{r create new variables}
 # estimate cortical folding variables
 dados_raw <- dados_raw %>%
@@ -247,6 +252,7 @@ dados <- full_join(dados, decay_AvgThickness) %>%
     logTotalArea_age_decay = log10(TotalArea_age_decay),
     ExposedArea_age_decay = ExposedArea - c_ExposedArea * (Age - Age.cor),
     logExposedArea_age_decay = log10(ExposedArea_age_decay),
+    localGI_age_decay = TotalArea_age_decay / ExposedArea_age_decay,
     K_age_decay = log10(TotalArea_age_decay) + 1/4*log10(AvgThickness_age_decay^2) - 5/4*log10(ExposedArea_age_decay),
     I_age_decay = log10(TotalArea_age_decay) + log10(ExposedArea_age_decay) + log10(AvgThickness_age_decay^2),
     S_age_decay = 3/2*log10(TotalArea_age_decay) + 3/4*log10(ExposedArea_age_decay) - 9/4*log10(AvgThickness_age_decay^2))
@@ -281,9 +287,181 @@ dados_hemi_v1 %>%
     age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
     age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
     ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2))
-  ) %>%
-  kable(digits = 2) %>%
-  kable_styling()
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+     N = n_distinct(SUBJ),
+    AvgThickness = paste(signif(mean(AvgThickness), 2), "±", signif(sd(AvgThickness), 2)),
+    TotalArea = paste(signif(mean(TotalArea), 2), "±", signif(sd(TotalArea), 2)),
+    ExposedArea = paste(signif(mean(ExposedArea), 2), "±", signif(sd(ExposedArea), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    k = paste(signif(mean(k), 2), "±", signif(sd(k), 2)),
+    K = paste(signif(mean(K), 2), "±", signif(sd(K), 2)),
+    S = paste(signif(mean(S), 2), "±", signif(sd(S), 2)),
+    I = paste(signif(mean(I), 2), "±", signif(sd(I), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  filter(!is.na(COGNITIVE_INDEX)) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    COGNITIVE_INDEX = paste(signif(mean(COGNITIVE_INDEX), 2), "±", signif(sd(COGNITIVE_INDEX), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+     N = n_distinct(SUBJ),
+    `A7/A5` = paste(signif(mean(`A7/A5`), 2), "±", signif(sd(`A7/A5`), 2)),
+    `TMT B-A` = paste(signif(mean(`TMT B-A`), 2), "±", signif(sd(`TMT B-A`), 2)),
+    `DIGIT SPAN BACK` = paste(signif(mean(`DIGIT SPAN BACK`), 2), "±", signif(sd(`DIGIT SPAN BACK`), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  filter(!is.na(Lipoxina)) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    Lipoxin = paste(signif(mean(Lipoxina), 2), "±", signif(sd(Lipoxina), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  filter(!is.na(`AB1-40`), !is.na(`AB1-42`), !is.na(TAU)) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    `AB1-40` = paste(signif(mean(`AB1-40`), 2), "±", signif(sd(`AB1-40`), 2)),
+    `AB1-42` = paste(signif(mean(`AB1-42`), 2), "±", signif(sd(`AB1-42`), 2)),
+    TAU = paste(signif(mean(TAU), 2), "±", signif(sd(TAU), 2))
+  )
+```
+
+### Stats tests 
+
+#### Age
+```{r}
+summary(aov(Age ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(Age ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### Education
+
+```{r}
+summary(aov(ESC ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(ESC ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### T
+
+```{r}
+summary(aov(AvgThickness ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(AvgThickness ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### AT
+
+```{r}
+summary(aov(TotalArea ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(TotalArea ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### AE
+
+```{r}
+summary(aov(ExposedArea ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(ExposedArea ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### k
+
+```{r}
+summary(aov(k ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(k ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### K
+
+```{r}
+summary(aov(K ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(K ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### S
+
+```{r}
+summary(aov(S ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(S ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### I
+
+```{r}
+summary(aov(I ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(I ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### COGNITIVE_INDEX
+
+```{r}
+summary(aov(COGNITIVE_INDEX ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(COGNITIVE_INDEX ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### A7/A5
+
+```{r}
+summary(aov(`A7/A5` ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(`A7/A5` ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### TMT B-A
+
+```{r}
+summary(aov(`TMT B-A` ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(`TMT B-A` ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### Digit Span Backwards
+
+```{r}
+summary(aov(`DIGIT SPAN BACK` ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(`DIGIT SPAN BACK` ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### Lipoxin
+
+```{r}
+summary(aov(Lipoxina ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(Lipoxina ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### AB1-40
+
+```{r}
+summary(aov(`AB1-40` ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(`AB1-40` ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### AB1-42
+
+```{r}
+summary(aov(`AB1-42` ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(`AB1-42` ~ Diagnostic, data = dados_hemi_v1))
+```
+
+#### TAU
+
+```{r}
+summary(aov(TAU ~ Diagnostic, data = dados_hemi_v1))
+TukeyHSD(aov(TAU ~ Diagnostic, data = dados_hemi_v1))
 ```
 
 ## Cortical Folding Model
@@ -438,7 +616,104 @@ fig1_alt_2
 
 ```
 
-## Diagnostic discrimination and prediction.
+## Are sex and education (in years) coufounding factors?
+
+### K - Sex
+```{r}
+#fit ANCOVA model
+ancova_model <- aov(K ~ Age + Gender, data = filter(dados_hemi_v1, Diagnostic == "CTL"))
+
+#view summary of model
+Anova(ancova_model, type="III")
+
+ggplot(data = dados_hemi_v1, aes(Age, K, color = Gender, fill = Gender, alpha = 0.4)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_pubr() +
+   stat_cor() + 
+    guides(alpha = "none", color = "none", fill = "none") + 
+  labs(x = "Age [years]") +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(data = dados_hemi_v1, aes(Diagnostic, K_age_decay, color = Gender, fill = Gender, alpha = 0.4)) +
+  geom_boxplot() +
+  theme_pubr() +
+    guides(alpha = "none", color = "none", fill = "none") + 
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+```
+
+### K - Education
+```{r}
+#fit ANCOVA model
+ancova_model <- aov(K ~ Age + ESC, data = filter(dados_hemi_v1, Diagnostic == "CTL"))
+
+#view summary of model
+Anova(ancova_model, type="III")
+
+ggplot(data = dados_hemi_v1, aes(ESC, K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_pubr() +
+   stat_cor() + 
+    guides(alpha = "none", color = "none", fill = "none") + 
+  labs(x = "Age [years]") +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(data = dados_hemi_v1, aes(ESC, K_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_pubr() +
+   stat_cor() + 
+    guides(alpha = "none", color = "none", fill = "none") + 
+  labs(x = "Age [years]") +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+```
+
+### S - Sex
+```{r}
+#fit ANCOVA model
+ancova_model <- aov(S ~ Age + Gender, data = filter(dados_hemi_v1, Diagnostic == "CTL"))
+
+#view summary of model
+Anova(ancova_model, type="III")
+
+```
+
+### S - Education
+```{r}
+#fit ANCOVA model
+ancova_model <- aov(S ~ Age + ESC, data = filter(dados_hemi_v1, Diagnostic == "CTL"))
+
+#view summary of model
+Anova(ancova_model, type="III")
+
+```
+
+### I - Sex
+```{r}
+#fit ANCOVA model
+ancova_model <- aov(I ~ Age + Gender, data = filter(dados_hemi_v1, Diagnostic == "CTL"))
+
+#view summary of model
+Anova(ancova_model, type="III")
+
+```
+
+### I - Education
+```{r}
+#fit ANCOVA model
+ancova_model <- aov(I ~ Age + ESC, data = filter(dados_hemi_v1, Diagnostic == "CTL"))
+
+#view summary of model
+Anova(ancova_model, type="III")
+
+```
+
+## Diagnostic discrimination
 
 ### K difference
 
@@ -446,6 +721,12 @@ fig1_alt_2
 aov <- aov(K ~ Diagnostic, data = dados_hemi_v1)
 summary(aov)
 TukeyHSD(aov)
+```
+
+```{r}
+aov <- aov(K ~ Diagnostic + Gender + ESC, data = dados_hemi_v1)
+summary(aov)
+TukeyHSD(aov, which = "Diagnostic")
 ```
 
 ### K is reduced with age, as cortical thickness, total area and exposed area
@@ -611,7 +892,42 @@ cpK_MCI <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpK_MCI)
+summary(cpK_MCI)
+
+```
+
+##### Sex as subgroups
+
+```{r echo=FALSE}
+cpK_sex <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+        K,
+        Diagnostic,
+        Gender,
+        pos_class = "AD",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpK_sex)
+
+cpK_MCI_sex <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+        K,
+        Diagnostic,
+        Gender,
+        pos_class = "MCI",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpK_MCI_sex)
 
 ```
 
@@ -629,7 +945,7 @@ cpT <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpT)
+summary(cpT)
 
 cpT_MCI <-
     cutpointr(
@@ -643,7 +959,42 @@ cpT_MCI <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpT_MCI)
+summary(cpT_MCI)
+```
+
+##### Sex as subgroups
+
+```{r echo=FALSE}
+cpT_sex <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+       logAvgThickness,
+        Diagnostic,
+        Gender,
+        pos_class = "AD",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpT_sex)
+
+cpT_MCI_sex <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+       logAvgThickness,
+        Diagnostic,
+        Gender,
+        pos_class = "MCI",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpT_MCI_sex)
+
 ```
 
 ```{r}
@@ -687,6 +1038,71 @@ cutpoint_b <- ggplot(dados_hemi_v1, aes(x = logAvgThickness, color = Diagnostic,
 fig_cutpoint <- ggarrange(cutpoint_a, cutpoint_b, labels = c("A", "B"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "top")
 ```
 
+#### GI
+```{r}
+cpGI <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+       localGI,
+        Diagnostic,
+        pos_class = "AD",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpGI)
+
+cpGI_MCI <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+       localGI,
+        Diagnostic,
+        pos_class = "MCI",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpGI_MCI)
+```
+
+##### Sex as subgroups
+
+```{r}
+cpGI_sex <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+       localGI,
+        Diagnostic,
+       Gender,
+        pos_class = "AD",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpGI_sex)
+
+cpGI_MCI_sex <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+       localGI,
+        Diagnostic,
+       Gender,
+        pos_class = "MCI",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpGI_MCI_sex)
+```
+
 #### Deaged
 ##### K
 ```{r}
@@ -702,7 +1118,7 @@ cpK_deaged <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpK)
+summary(cpK_deaged)
 # plot(cpK)
 
 cpK_MCI_deaged <-
@@ -717,7 +1133,7 @@ cpK_MCI_deaged <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpK_MCI)
+summary(cpK_MCI_deaged)
 # plot(cpK_MCI)
 
 ```
@@ -737,7 +1153,7 @@ cpT_deaged <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpT)
+summary(cpT_deaged)
 
 cpT_MCI_deaged <-
     cutpointr(
@@ -751,7 +1167,41 @@ cpT_MCI_deaged <-
         na.rm = TRUE,
         boot_runs = 1000,
     use_midpoints = TRUE)
-# summary(cpT_MCI)
+summary(cpT_MCI_deaged)
+
+```
+
+##### GI
+```{r}
+cpGI_deaged <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
+        localGI_age_decay,
+        Diagnostic,
+        pos_class = "AD",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpGI_deaged)
+# plot(cpK)
+
+cpGI_MCI_deaged <-
+    cutpointr(
+        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
+        localGI_age_decay,
+        Diagnostic,
+        pos_class = "MCI",
+        neg_class = "CTL",
+        method = maximize_boot_metric,
+        metric = sum_sens_spec,
+        na.rm = TRUE,
+        boot_runs = 1000,
+    use_midpoints = TRUE)
+summary(cpGI_MCI_deaged)
+# plot(cpK_MCI)
 
 ```
 
@@ -857,6 +1307,19 @@ dados_hemi_v1_agegroups <- dados_hemi_v1 %>%
 
 ```
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+dados_hemi_v1_agegroups %>%
+  group_by(Diagnostic, Age.group) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
+    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2))
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
 #### K
 ```{r}
 summary(aov(K ~ Diagnostic:Age.group, data = dados_hemi_v1_agegroups))
@@ -897,6 +1360,26 @@ fig3a <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.S, color = Diagnostic)) +
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
+fig3a
+
+```
+
+```{r}
+ggplot(mean_K_I_S, aes(x = mean.K, y = mean.S, color = Diagnostic)) +
+  geom_point() +
+  geom_line(group =1, color = "gray") +
+  geom_errorbar(aes(ymin = mean.S - SD_S, ymax = mean.S + SD_S))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1,aes(x = Knorm, y = Snorm, color = Diagnostic), alpha = 0.2) +
+  theme_pubr() +
+  # theme(axis.title = element_text(size = 11),
+  #   axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+```
+
+```{r}
 fig3c <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
   geom_point() +
   geom_line(group =1, color = "gray") +
@@ -905,6 +1388,23 @@ fig3c <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
   #   axis.text = element_text(size = 10), text = element_text(size = 10)) +
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
+
+fig3c
+```
+
+```{r}
+ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
+  geom_point() +
+  geom_line(group =1, color = "gray") +
+    geom_errorbar(aes(ymin = mean.I - SD_I, ymax = mean.I + SD_I))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1, aes(x = Knorm, y = Inorm, color = Diagnostic), alpha = 0.2) +
+  theme_pubr() +
+  # theme(axis.title = element_text(size = 11),
+  #   axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
 ```
 
 ```{r}
@@ -937,6 +1437,31 @@ fig3b <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Diagno
   scale_colour_manual(values=cbbPalette2) +
   theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
 
+fig3b
+
+```
+
+```{r}
+fig3b_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Diagnostic, shape = Age.group))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+  geom_errorbar(aes(ymin = mean.S - SD_S, ymax = mean.S + SD_S))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Snorm, color = Diagnostic, shape = Age.group), alpha = 0.2) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "S (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+
+fig3b_Alt
+```
+
+```{r}
 fig3d <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age.group ))+
     geom_point() +
     geom_line(aes(group = Diagnostic)) +
@@ -950,6 +1475,30 @@ fig3d <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagno
   scale_colour_manual(values=cbbPalette2) +
   theme(legend.position="bottom" , legend.box="vertical", legend.margin=margin())
 
+fig3d
+
+```
+
+```{r}
+fig3d_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age.group))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    geom_errorbar(aes(ymin = mean.I - SD_I, ymax = mean.I + SD_I))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Inorm, color = Diagnostic, shape = Age.group), alpha = 0.2) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "I (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+fig3d_Alt
+```
+
+```{r}
 fig3s <- ggarrange(fig3b, fig3d, labels = c("A", "B"), nrow=2, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
 
 #fig3s <- ggarrange(fig3a, fig3b,fig3c, fig3d, labels = c("A", "B","C","D"), nrow=2, ncol=2, font.label = list(size = 11))
@@ -960,8 +1509,249 @@ ggsave("fig3s.png",fig3s, width = 9, height = 17.1, units = "cm", device = "png"
 # ggsave("fig3s.pdf",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "pdf")
 ```
 
+
+```{r}
+fig3s_Alt <- ggarrange(fig3b_Alt, fig3d_Alt, labels = c("A", "B"),ncol = 2, nrow=1, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+
+fig3s_Alt
+
+#fig3s <- ggarrange(fig3a, fig3b,fig3c, fig3d, labels = c("A", "B","C","D"), nrow=2, ncol=2, font.label = list(size = 11))
+
+ggsave("fig3s_Alt.pdf",fig3s_Alt, width = 18, height = 9, units = "cm", device = "pdf")
+ggsave("fig3s_Alt.png",fig3s_Alt, width = 18, height = 9, units = "cm", device = "png")
+
+# ggsave("fig3s.pdf",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "pdf")
+```
+
 ```{r figure3, fig.cap="\\label{fig:figure3}Morphological trajectory traced across the normalized independent components K, S,and I. We normalized the variable to the unity vectors providing comparable scale for the differences in both axes. (A, C) CTL as Control (blue, N~=~77) and the reference, MCI as Mild Cognitive Impairment (green, N~=~33) and AD for Alzheimer’s Disease (red, N~=~17). (B, D) Groups were divide in two subgroups, subjects with age between 65 and 75 years (circle, CTL N~=~67, MCI N~=~24, AD N~=~4) old and subjects with ages between 76 and 85 years old (triangle, CTL N~=~10, MCI N~=~9, AD N~=~9).", fig.height=6.73, fig.width=3.54 }
 fig3s
+```
+
+### FIGURE 3 with age intervals
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+dados_hemi_v1 %>%
+  group_by(Diagnostic, Age_interval10) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
+    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2))
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
+
+```{r}
+mean_K_I_S_agegroups <-
+  dados_hemi_v1_agegroups %>% group_by(Diagnostic, Age_interval10) %>% summarise(
+    mean.T = mean(logAvgThickness, na.rm = TRUE),
+    SD_T = sd(logAvgThickness, na.rm = TRUE),
+    mean.K = mean(Knorm, na.rm = TRUE),
+    SD_K = sd(Knorm, na.rm = TRUE),
+    mean.I = mean(Inorm, na.rm = TRUE),
+    SD_I = sd(Inorm, na.rm = TRUE),
+    mean.S = mean(Snorm, na.rm = TRUE),
+    SD_S = sd(Snorm, na.rm = TRUE),
+    N_SUBJ = n_distinct(SUBJ)
+  )
+
+```
+
+```{r}
+fig3b <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "S (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+
+fig3b
+
+```
+
+```{r}
+fig3b_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+  geom_errorbar(aes(ymin = mean.S - SD_S, ymax = mean.S + SD_S))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Snorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "S (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+
+fig3b_Alt
+```
+
+```{r}
+fig3d <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() +
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "I (normalized)")  +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom" , legend.box="vertical", legend.margin=margin())
+
+fig3d
+
+```
+
+```{r}
+fig3d_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    geom_errorbar(aes(ymin = mean.I - SD_I, ymax = mean.I + SD_I))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Inorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "I (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+fig3d_Alt
+```
+
+```{r}
+fig3s <- ggarrange(fig3b, fig3d, labels = c("A", "B"), nrow=2, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+
+fig3s
+```
+
+
+```{r}
+fig3s_Alt_allgroups <- ggarrange(fig3b_Alt, fig3d_Alt, labels = c("A", "B"),ncol = 2, nrow=1, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+
+fig3s_Alt_allgroups
+
+ggsave("fig3s_Alt_allgroups.pdf",fig3s_Alt_allgroups, width = 18, height = 9, units = "cm", device = "pdf")
+
+```
+
+### FIGURE 3 with age intervals - age corrected
+
+```{r}
+mean_K_I_S_agegroups <-
+  filter(dados_hemi_v1_agegroups) %>% group_by(Diagnostic, Age_interval10) %>% summarise(
+    mean.T = mean(logAvgThickness, na.rm = TRUE),
+    SD_T = sd(logAvgThickness, na.rm = TRUE),
+    mean.K = mean(K_age_decay/ sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2), na.rm = TRUE),
+    SD_K = sd(K_age_decay/ sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2), na.rm = TRUE),
+    mean.I = mean(I_age_decay/ sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1), na.rm = TRUE),
+    SD_I = sd(I_age_decay/ sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1), na.rm = TRUE),
+    mean.S = mean(S_age_decay/ sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2), na.rm = TRUE),
+    SD_S = sd(S_age_decay/ sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2), na.rm = TRUE),
+    N_SUBJ = n_distinct(SUBJ)
+  )
+```
+
+```{r}
+fig3b <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "S (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+
+fig3b
+
+```
+
+```{r}
+fig3b_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+  geom_errorbar(aes(ymin = mean.S - SD_S, ymax = mean.S + SD_S))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Snorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "S (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+
+fig3b_Alt
+```
+
+```{r}
+fig3d <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() +
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "I (normalized)")  +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom" , legend.box="vertical", legend.margin=margin())
+
+fig3d
+
+```
+
+```{r}
+fig3d_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Diagnostic, shape = Age_interval10))+
+    geom_point() +
+    geom_line(aes(group = Diagnostic)) +
+    geom_errorbar(aes(ymin = mean.I - SD_I, ymax = mean.I + SD_I))  +
+  geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
+  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Inorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
+    #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
+    theme_pubr() + 
+  # guides(color = "none") + 
+    labs(shape = "Age", x = "K (normalized)", y = "I (normalized)") +
+    # theme(axis.title = element_text(size = 11),
+    #       axis.text = element_text(size = 10), text = element_text(size = 10)) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2) +
+  theme(legend.position="bottom", legend.box="vertical", legend.margin=margin())
+fig3d_Alt
+```
+
+```{r}
+fig3s <- ggarrange(fig3b, fig3d, labels = c("A", "B"), nrow=2, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+
+fig3s
+```
+
+```{r}
+fig3s_Alt <- ggarrange(fig3b_Alt, fig3d_Alt, labels = c("A", "B"),ncol = 2, nrow=1, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+
+fig3s_Alt
 ```
 
 ```{r eval=FALSE, include=FALSE}
