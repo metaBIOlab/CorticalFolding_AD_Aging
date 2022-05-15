@@ -90,13 +90,9 @@ dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv",
 AHEAD <- read_csv("AHEAD.csv", locale = locale(decimal_mark = ",", 
     grouping_mark = "."))
 
-ADNI <- read_delim("ADNI.csv", delim = ";", 
-    quote = "'", escape_double = FALSE, locale = locale(decimal_mark = ",", 
-        grouping_mark = "."), trim_ws = TRUE)
+ADNI <- ADNI <- read_csv("~/GitHub/CorticalFolding_AD_Aging/ADNI.csv")
 
-ADNICTL <- read_delim("ADNICTL.csv", delim = ";", 
-    quote = "'", escape_double = FALSE, locale = locale(decimal_mark = ",", 
-        grouping_mark = "."), trim_ws = TRUE)
+ADNICTL <- ADNICTL <- read_csv("~/GitHub/CorticalFolding_AD_Aging/ADNICTL.csv")
 
 # IDOR <- read_csv("dados_raw.csv")
 # AOMICPIOP1 <- read_csv("AOMICPIOP1.csv", locale = locale(decimal_mark = ",", 
@@ -355,6 +351,16 @@ ggsave(
   units = "cm",
   device = "pdf"
 )
+
+ggsave(
+  "fig1a.png",
+  plot = fig1a,
+  dpi = 1200,
+  width = 8.7,
+  height = 11,
+  units = "cm",
+  device = "png"
+)
 ```
 
 ```{r figures10, fig.cap="\\label{fig:figures10}Age effect in cortical gyrification. Cortical folding model slope $\alpha$ within 5 years, only for Healthy Cognitive Unimpaired Controls. Above each point, we display the number of subjects in each regression. Bars represent the standard deviation for the respective age interval regression. Points with one subject were excluded due to the lack of statistical significance.", fig.height=4.33, fig.width=3.42}
@@ -448,6 +454,15 @@ ggsave(
   device = "pdf"
 )
 
+ggsave(
+  "figS3.png",
+  plot = figS3,
+  dpi = 1200,
+  width = 17.8,
+  height = 12,
+  units = "cm",
+  device = "png"
+)
 ```
 
 ```{r figures3, fig.cap="\\label{fig:figures3}Slope for each sample with the number of subjects included and the age range. The traced line is for 1.25, the theoretical value of the slope alpha. Bars represents the standard deviation.", fig.height=4.72, fig.width=7}
@@ -610,6 +625,15 @@ ggsave(
   device = "pdf"
 )
 
+ggsave(
+  "figS4.png",
+  dpi = 1200,
+  width = 17.8,
+  height = 9,
+  units = "cm",
+  device = "png"
+)
+
 ```
 
 ```{r figures4, fig.cap="\\label{fig:figures4}Plots comparing morphological variables behavior with Age. Red is for AOMICPIOP01-Control and blue for IDOR-Control. The x-axis is modified to hide the age interval from 30 to 40 years old that has none subjects, two data points with only one subject, 40-45 and 80-85. The total number of subjects included are 284. (A) Slope for each Age interval group and each sample. The number on top of the point indicates the number of subjects included in the linear regression, and each subject contributes with two data points, one for each hemisphere. The traced line is for 1.25, the theoretical value of the slope. Bars represents the standard deviation. (B) Log10(T) distribution for each Age interval group and each sample. Bars represents the 95% Confidence interval. (C) K distribution for each Age interval group and each sample. Bars represents the 95% Confidence interval.", fig.height=3.54, fig.width=7}
@@ -670,6 +694,15 @@ ggsave(
   height = 11.4,
   units = "cm",
   device = "pdf"
+)
+
+ggsave(
+  "figS5.png",
+  dpi = 1200,
+  width = 11.4,
+  height = 11.4,
+  units = "cm",
+  device = "png"
 )
 ```
 
@@ -787,6 +820,15 @@ ggsave(
   device = "pdf"
 )
 
+ggsave(
+  "figS6.png",
+  plot = figS6,
+  dpi = 1200,
+  width = 17.8,
+  height = 22,
+  units = "cm",
+  device = "png"
+)
 ```
 
 ```{r figures6, fig.cap="\\label{fig:figures6}Distribution of subjects for every Healthy Control subject across the independent morphological component through age. For HCP500r and AHEAD, the mean age of the interval was considered, since ages are determined by an interval of years, instead of one value for each subject. The solid line represents a linear regression applied for all data with the 95% confidence interval. (A) K, the tensor component, Pearson's r=-0.77, p<0.0001 (B) S, the shape component, Pearson's r=0.21, p<0.0001, and (C) I, the volume component, Pearson's r=-0.62, p<0.0001.", fig.height=8.66, fig.width=7}
