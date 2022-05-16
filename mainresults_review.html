@@ -190,7 +190,7 @@ pre code {
 <li><a href="#slope-alpha"><span class="toc-section-number">5.3.1</span> Slope alpha</a></li>
 <li><a href="#k-2"><span class="toc-section-number">5.3.2</span> K</a></li>
 <li><a href="#s-1"><span class="toc-section-number">5.3.3</span> S</a></li>
-<li><a href="#i"><span class="toc-section-number">5.3.4</span> I</a></li>
+<li><a href="#i-1"><span class="toc-section-number">5.3.4</span> I</a></li>
 </ul></li>
 <li><a href="#are-sex-and-education-in-years-coufounding-factors"><span class="toc-section-number">5.4</span> Are sex and education (in years) coufounding factors?</a>
 <ul>
@@ -242,80 +242,48 @@ pre code {
 <h1><span class="header-section-number">5</span> RESULTS</h1>
 <div id="data-description" class="section level2" number="5.1">
 <h2><span class="header-section-number">5.1</span> Data description</h2>
-<table class="table" style="margin-left: auto; margin-right: auto;">
-<thead>
-<tr>
-<th style="text-align:left;">
-Diagnostic
-</th>
-<th style="text-align:right;">
-N
-</th>
-<th style="text-align:left;">
-age
-</th>
-<th style="text-align:left;">
-age_range
-</th>
-<th style="text-align:left;">
-ESC
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-AD
-</td>
-<td style="text-align:right;">
-13
-</td>
-<td style="text-align:left;">
-77 ± 6.1
-</td>
-<td style="text-align:left;">
-63 ; 86
-</td>
-<td style="text-align:left;">
-13 ± 3
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-MCI
-</td>
-<td style="text-align:right;">
-33
-</td>
-<td style="text-align:left;">
-72 ± 4.6
-</td>
-<td style="text-align:left;">
-62 ; 82
-</td>
-<td style="text-align:left;">
-13 ± 2.4
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-CTL
-</td>
-<td style="text-align:right;">
-77
-</td>
-<td style="text-align:left;">
-66 ± 8.4
-</td>
-<td style="text-align:left;">
-43 ; 80
-</td>
-<td style="text-align:left;">
-15 ± 2.2
-</td>
-</tr>
-</tbody>
-</table>
+<pre><code>## # A tibble: 3 x 5
+##   Diagnostic     N age      age_range ESC     
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;     &lt;chr&gt;   
+## 1 AD            13 77 ± 6.1 63 ;  86  13 ± 3  
+## 2 MCI           33 72 ± 4.6 62 ;  82  13 ± 2.4
+## 3 CTL           77 66 ± 8.4 43 ;  80  15 ± 2.2</code></pre>
+<pre><code>## # A tibble: 3 x 5
+##   Diagnostic     N AvgThickness TotalArea    ExposedArea 
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;        &lt;chr&gt;        &lt;chr&gt;       
+## 1 AD            13 2.4 ± 0.079  95000 ± 9300 37000 ± 3000
+## 2 MCI           33 2.5 ± 0.085  97000 ± 8500 37000 ± 2800
+## 3 CTL           77 2.5 ± 0.099  98000 ± 7800 37000 ± 2400</code></pre>
+<pre><code>## # A tibble: 3 x 6
+##   Diagnostic     N k             K             S          I         
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;         &lt;chr&gt;         &lt;chr&gt;      &lt;chr&gt;     
+## 1 AD            13 0.28 ± 0.01   -0.55 ± 0.015 9.2 ± 0.13 10 ± 0.069
+## 2 MCI           33 0.29 ± 0.0096 -0.53 ± 0.014 9.2 ± 0.12 10 ± 0.063
+## 3 CTL           77 0.3 ± 0.0095  -0.52 ± 0.014 9.1 ± 0.1  10 ± 0.072</code></pre>
+<pre><code>## # A tibble: 3 x 3
+##   Diagnostic     N COGNITIVE_INDEX
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;          
+## 1 AD            13 -3.4 ± 1.5     
+## 2 MCI           32 -1.5 ± 1.3     
+## 3 CTL           76 0.21 ± 0.65</code></pre>
+<pre><code>## # A tibble: 3 x 5
+##   Diagnostic     N `A7/A5`     `TMT B-A` `DIGIT SPAN BACK`
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;            
+## 1 AD            13 0.24 ± 0.31 230 ± 130 3.8 ± 1.4        
+## 2 MCI           33 0.54 ± 0.3  130 ± 110 4.7 ± 1.6        
+## 3 CTL           77 0.82 ± 0.18 59 ± 48   5.8 ± 1.7</code></pre>
+<pre><code>## # A tibble: 3 x 3
+##   Diagnostic     N Lipoxin 
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;   
+## 1 AD             6 79 ± 74 
+## 2 MCI           13 120 ± 49
+## 3 CTL           28 130 ± 62</code></pre>
+<pre><code>## # A tibble: 3 x 5
+##   Diagnostic     N `AB1-40`    `AB1-42`  TAU      
+##   &lt;fct&gt;      &lt;int&gt; &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;    
+## 1 AD             6 5700 ± 1700 280 ± 60  630 ± 280
+## 2 MCI           13 4600 ± 2600 410 ± 310 440 ± 200
+## 3 CTL           29 4200 ± 1900 530 ± 240 350 ± 190</code></pre>
 <div id="stats-tests" class="section level3" number="5.1.1">
 <h3><span class="header-section-number">5.1.1</span> Stats tests</h3>
 <div id="age" class="section level4" number="5.1.1.1">
@@ -458,8 +426,26 @@ CTL
 ## CTL-AD  -0.07844671 -0.13382516 -0.023068259 0.0027747
 ## CTL-MCI -0.03012586 -0.06855234  0.008300619 0.1561058</code></pre>
 </div>
-<div id="cognitive_index" class="section level4" number="5.1.1.9">
-<h4><span class="header-section-number">5.1.1.9</span> COGNITIVE_INDEX</h4>
+<div id="i" class="section level4" number="5.1.1.9">
+<h4><span class="header-section-number">5.1.1.9</span> I</h4>
+<pre><code>##              Df Sum Sq Mean Sq F value  Pr(&gt;F)    
+## Diagnostic    2 0.1083 0.05415   11.21 2.2e-05 ***
+## Residuals   243 1.1734 0.00483                    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre><code>##   Tukey multiple comparisons of means
+##     95% family-wise confidence level
+## 
+## Fit: aov(formula = I ~ Diagnostic, data = dados_hemi_v1)
+## 
+## $Diagnostic
+##               diff         lwr        upr     p adj
+## MCI-AD  0.04158669 0.003644613 0.07952877 0.0277853
+## CTL-AD  0.06616956 0.031425940 0.10091318 0.0000325
+## CTL-MCI 0.02458287 0.000474665 0.04869107 0.0445049</code></pre>
+</div>
+<div id="cognitive_index" class="section level4" number="5.1.1.10">
+<h4><span class="header-section-number">5.1.1.10</span> COGNITIVE_INDEX</h4>
 <pre><code>##              Df Sum Sq Mean Sq F value Pr(&gt;F)    
 ## Diagnostic    2  345.2  172.60   186.2 &lt;2e-16 ***
 ## Residuals   239  221.5    0.93                   
@@ -477,8 +463,8 @@ CTL
 ## CTL-AD  3.559353 3.077455 4.041252     0
 ## CTL-MCI 1.685132 1.346780 2.023484     0</code></pre>
 </div>
-<div id="a7a5" class="section level4" number="5.1.1.10">
-<h4><span class="header-section-number">5.1.1.10</span> A7/A5</h4>
+<div id="a7a5" class="section level4" number="5.1.1.11">
+<h4><span class="header-section-number">5.1.1.11</span> A7/A5</h4>
 <pre><code>##              Df Sum Sq Mean Sq F value Pr(&gt;F)    
 ## Diagnostic    2  9.556   4.778   87.41 &lt;2e-16 ***
 ## Residuals   243 13.283   0.055                   
@@ -495,8 +481,8 @@ CTL
 ## CTL-AD  0.5878375 0.4709386 0.7047365 0e+00
 ## CTL-MCI 0.2816619 0.2005470 0.3627767 0e+00</code></pre>
 </div>
-<div id="tmt-b-a" class="section level4" number="5.1.1.11">
-<h4><span class="header-section-number">5.1.1.11</span> TMT B-A</h4>
+<div id="tmt-b-a" class="section level4" number="5.1.1.12">
+<h4><span class="header-section-number">5.1.1.12</span> TMT B-A</h4>
 <pre><code>##              Df  Sum Sq Mean Sq F value Pr(&gt;F)    
 ## Diagnostic    2  735270  367635   59.54 &lt;2e-16 ***
 ## Residuals   243 1500421    6175                   
@@ -513,8 +499,26 @@ CTL
 ## CTL-AD  -168.15984 -207.44848 -128.87120 0e+00
 ## CTL-MCI  -71.19481  -98.45675  -43.93286 0e+00</code></pre>
 </div>
-<div id="lipoxin" class="section level4" number="5.1.1.12">
-<h4><span class="header-section-number">5.1.1.12</span> Lipoxin</h4>
+<div id="digit-span-backwards" class="section level4" number="5.1.1.13">
+<h4><span class="header-section-number">5.1.1.13</span> Digit Span Backwards</h4>
+<pre><code>##              Df Sum Sq Mean Sq F value  Pr(&gt;F)    
+## Diagnostic    2  130.5   65.23   23.35 5.3e-10 ***
+## Residuals   243  678.8    2.79                    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre><code>##   Tukey multiple comparisons of means
+##     95% family-wise confidence level
+## 
+## Fit: aov(formula = `DIGIT SPAN BACK` ~ Diagnostic, data = dados_hemi_v1)
+## 
+## $Diagnostic
+##              diff        lwr      upr     p adj
+## MCI-AD  0.9277389 0.01513558 1.840342 0.0453355
+## CTL-AD  2.0749251 1.23925278 2.910597 0.0000000
+## CTL-MCI 1.1471861 0.56732261 1.727050 0.0000152</code></pre>
+</div>
+<div id="lipoxin" class="section level4" number="5.1.1.14">
+<h4><span class="header-section-number">5.1.1.14</span> Lipoxin</h4>
 <pre><code>##             Df Sum Sq Mean Sq F value Pr(&gt;F)  
 ## Diagnostic   2  22866   11433   3.162  0.047 *
 ## Residuals   91 328983    3615                 
@@ -532,8 +536,8 @@ CTL
 ## CTL-AD  48.053571   2.481574 93.62557 0.0363106
 ## CTL-MCI  6.912802 -27.085285 40.91089 0.8788408</code></pre>
 </div>
-<div id="ab1-40" class="section level4" number="5.1.1.13">
-<h4><span class="header-section-number">5.1.1.13</span> AB1-40</h4>
+<div id="ab1-40" class="section level4" number="5.1.1.15">
+<h4><span class="header-section-number">5.1.1.15</span> AB1-40</h4>
 <pre><code>##             Df    Sum Sq  Mean Sq F value Pr(&gt;F)  
 ## Diagnostic   2  21789698 10894849   2.512 0.0866 .
 ## Residuals   93 403399541  4337629                 
@@ -551,8 +555,8 @@ CTL
 ## CTL-AD  -1472.1773 -3045.357 101.0023 0.0715922
 ## CTL-MCI  -365.0005 -1535.774 805.7730 0.7388565</code></pre>
 </div>
-<div id="ab1-42" class="section level4" number="5.1.1.14">
-<h4><span class="header-section-number">5.1.1.14</span> AB1-42</h4>
+<div id="ab1-42" class="section level4" number="5.1.1.16">
+<h4><span class="header-section-number">5.1.1.16</span> AB1-42</h4>
 <pre><code>##             Df  Sum Sq Mean Sq F value  Pr(&gt;F)   
 ## Diagnostic   2  754908  377454   6.109 0.00322 **
 ## Residuals   93 5745949   61784                   
@@ -570,8 +574,8 @@ CTL
 ## CTL-AD  254.2086  66.45357 441.9636 0.0049071
 ## CTL-MCI 120.5708 -19.15804 260.2997 0.1049626</code></pre>
 </div>
-<div id="tau" class="section level4" number="5.1.1.15">
-<h4><span class="header-section-number">5.1.1.15</span> TAU</h4>
+<div id="tau" class="section level4" number="5.1.1.17">
+<h4><span class="header-section-number">5.1.1.17</span> TAU</h4>
 <pre><code>##             Df  Sum Sq Mean Sq F value   Pr(&gt;F)    
 ## Diagnostic   2  796811  398405   9.286 0.000211 ***
 ## Residuals   93 3990218   42906                     
@@ -659,7 +663,7 @@ CTL
 ##       cor 
 ## 0.1244254</code></pre>
 </div>
-<div id="i" class="section level3" number="5.3.4">
+<div id="i-1" class="section level3" number="5.3.4">
 <h3><span class="header-section-number">5.3.4</span> I</h3>
 <pre><code>## 
 ##  Pearson&#39;s product-moment correlation
@@ -2669,7 +2673,7 @@ CTL
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 </div>
-<div id="i-1" class="section level4" number="5.5.6.3">
+<div id="i-2" class="section level4" number="5.5.6.3">
 <h4><span class="header-section-number">5.5.6.3</span> I</h4>
 <pre><code>##                       Df Sum Sq Mean Sq F value   Pr(&gt;F)    
 ## Diagnostic:Age.group   5 0.1416 0.02832   5.961 3.23e-05 ***
