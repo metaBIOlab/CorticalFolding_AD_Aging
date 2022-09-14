@@ -39,7 +39,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/CorticalFolding_AD_Aging")
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -69,6 +69,7 @@ library(ggstatsplot)
 library(effects)
 
 ```
+
 ```{r} 
 # COLOR BLIND PALETTE WITH BLACK
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -274,10 +275,10 @@ d <- density(filter(dados_v1, ROI == "hemisphere", Diagnostic == "AD")$K)
 valley <- optimize(approxfun(d$x,d$y), interval = c(-0.55,-0.53))$minimum
 
 dados_lowAD <- filter(dados_v1, ROI == "hemisphere", Diagnostic == "AD",  K > valley) %>%
-  dplyr::select(c(SUBJ, Diagnostic, hemi))
+  dplyr::select(c(SUBJ, Diagnostic))
 
 dados_highAD <- filter(dados_v1, ROI == "hemisphere", Diagnostic == "AD" ,  K < valley | K == valley ) %>%
-  dplyr::select(c(SUBJ, Diagnostic, hemi))
+  dplyr::select(c(SUBJ, Diagnostic))
 
 dados_highAD_all <- anti_join(dados_v1, dados_lowAD)
 
@@ -289,16 +290,17 @@ dados_highAD_all$ROI <- factor(dados_highAD_all$ROI, levels = c("hemisphere", "F
 
 dados_lowAD_all$ROI <- factor(dados_lowAD_all$ROI, levels = c("hemisphere", "F", "O", "P", "T")) 
 
-dados_v1 <- dados_v1 %>%
+dados_v1 <- filter(dados_v1, SUBJ != "SUBJ104") %>%
   mutate(ADlevel = "All subjects") %>%
-  dplyr::select(c(SUBJ, hemi, Age, Gender, Diagnostic, ROI, K, K_corrected, S, S_corrected, I, I_corrected, logAvgThickness, ADlevel))
+  dplyr::select(c(SUBJ, hemi, Age, Gender, Diagnostic, ESC, ROI, K, K_corrected, S, S_corrected, I, I_corrected, logAvgThickness, ADlevel, `A7/A5`, `TMT B-A`, `DIGIT SPAN BACK`, COGNITIVE_INDEX, `AB1-40`, `AB1-42`, TAU, AB1_ratio, TAU_AB1_42_ratio, TAU_AB1_ratio))
 
-dados_highAD_all <- dados_highAD_all %>%
+dados_highAD_all <- filter(dados_highAD_all, SUBJ != "SUBJ104") %>%
   mutate(ADlevel = "AD subjects with lower K (K < -0.54)") %>%
-  dplyr::select(c(SUBJ, hemi, Age, Gender, Diagnostic, ROI, K, K_corrected, S, S_corrected, I, I_corrected, logAvgThickness, ADlevel))
+  dplyr::select(c(SUBJ, hemi, Age, Gender, Diagnostic, ESC, ROI, K, K_corrected, S, S_corrected, I, I_corrected, logAvgThickness, ADlevel, `A7/A5`, `TMT B-A`, `DIGIT SPAN BACK`, COGNITIVE_INDEX, `AB1-40`, `AB1-42`, TAU, AB1_ratio, TAU_AB1_42_ratio, TAU_AB1_ratio))
 
-dados_lowAD_all <- dados_lowAD_all %>% mutate(ADlevel = "AD subjects with higher K (K >= -0.54)") %>%
-  dplyr::select(c(SUBJ, hemi, Age, Gender, Diagnostic, ROI, K, K_corrected, S, S_corrected, I, I_corrected, logAvgThickness, ADlevel))
+dados_lowAD_all <- filter(dados_lowAD_all, SUBJ != "SUBJ104") %>%
+  mutate(ADlevel = "AD subjects with higher K (K >= -0.54)") %>%
+dplyr::select(c(SUBJ, hemi, Age, Gender, Diagnostic, ESC, ROI, K, K_corrected, S, S_corrected, I, I_corrected, logAvgThickness, ADlevel, `A7/A5`, `TMT B-A`, `DIGIT SPAN BACK`, COGNITIVE_INDEX, `AB1-40`, `AB1-42`, TAU, AB1_ratio, TAU_AB1_42_ratio, TAU_AB1_ratio))
 
 dados_adlevel <- rbind(dados_v1, dados_highAD_all, dados_lowAD_all)
 
@@ -316,7 +318,7 @@ fig_K_spread <-  ggplot(dados_adlevel, aes(x = K_corrected, color = Diagnostic, 
 
 ggsave("fig_K_spread.pdf", plot= fig_K_spread, dpi=1200, width = 17.4, height = 22, units = "cm", device = "pdf")
 
-ggsave("fig_K_spread.png", plot= fig_K_spread, dpi=1200, width = 17.4, height = 22, units = "cm", device = "png")
+ggsave("fig_K_spread.eps", plot= fig_K_spread, dpi=1200, width = 17.4, height = 22, units = "cm", device = "eps")
 ```
 
 ```{r figureS8, fig.cap="\\label{fig:figureS9}K density plots across hemisphere and lobes. AD as red, MCI as green, and CTL as blue. In the first column, all AD subjects were included, along with all MCI and CTL subjects. The second column display results only for AD subjects with hemispherical K~\textless{}~-0.54, and MCI and CTL subjects. Finally, all AD subjects with hemispherical K>-0.54 or K=-0.54 with MCI and CTL subjects.", fig.height=8.66, fig.width=6.85}
@@ -345,6 +347,34 @@ summary(cpK)
 cpk_roc_a <- plot_roc(cpK) +
   theme_pubr()  +
   theme(axis.title = element_text(size = 11),  axis.text = element_text(size = 10), text = element_text(size = 10))
+
+cpK_MCI <-
+  cutpointr(
+    filter(dados_v1, Diagnostic == "MCI" |
+             Diagnostic == "CTL", ROI == "hemisphere"),
+    K,
+    Diagnostic,
+    pos_class = "MCI",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
+summary(cpK_MCI)
+
+cpk_roc_b <- plot_roc(cpK_MCI) +
+  theme_pubr()  +
+  theme(axis.title = element_text(size = 11),  axis.text = element_text(size = 10), text = element_text(size = 10))
+
+cpk_roc <- ggarrange(cpk_roc_a, cpk_roc_b, labels = c("A","B"), nrow = 1, ncol = 2, font.label = list(size = 11), common.legend = TRUE, legend = "top")
+
+cpk_roc
+
+ggsave("fig_roc.pdf", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "pdf")
+
+ggsave("fig_roc.eps", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "eps")
 ```
 
 ## High AD
@@ -373,10 +403,202 @@ cpk_roc_b <- plot_roc(cpK) +
 cpk_roc <- ggarrange(cpk_roc_a, cpk_roc_b, labels = c("A","B"), nrow = 1, ncol = 2, font.label = list(size = 11), common.legend = TRUE, legend = "top")
 ggsave("fig_roc_highAD.pdf", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "pdf")
 
-ggsave("fig_roc_highAD.png", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "png")
+ggsave("fig_roc_highAD.eps", plot= cpk_roc, dpi=1200, width = 17.4, height = 11, units = "cm", device = "eps")
 ```
 
 ```{r figureS9, fig.cap="\\label{fig:figureS9}ROC curves derived from the optimal cut-off analysis of K (hemisphere as ROI) to discriminate CTL and AD subjects. (A) All AD subjects included and optimal cut-off=-0.54. (B) AD subjects included if hemispherical K<-0.54, optimal cut-off=-0.55.", fig.height=4.33, fig.width=6.85}
 cpk_roc
 ```
 
+```{r}
+filter(dados_adlevel, ROI == "hemisphere") %>%
+  group_by(ADlevel, Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2))
+  ) 
+
+```
+
+
+```{r}
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = `A7/A5`, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = `A7/A5`, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = `TMT B-A`, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = `TMT B-A`, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = `DIGIT SPAN BACK`, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = `DIGIT SPAN BACK`, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = COGNITIVE_INDEX, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = COGNITIVE_INDEX, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = `AB1-42`, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = `AB1-42`, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = TAU, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = TAU, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = AB1_ratio, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = AB1_ratio, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = TAU_AB1_42_ratio, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = TAU_AB1_42_ratio, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere"), aes(y = TAU_AB1_ratio, x = K_corrected, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+    geom_point() +
+    geom_vline(xintercept = valley) +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")+
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+ggplot(filter(dados_adlevel, ROI == "hemisphere", ADlevel != "All subjects"), aes(y = TAU_AB1_ratio, x = Diagnostic, color = ADlevel, fill = ADlevel, alpha = 0.4)) +
+    geom_boxplot() +
+    stat_compare_means(method = "t.test") +
+    guides(alpha = "none") +
+    theme_pubr() +
+    # labs(y = "K") +
+    # facet_grid(ROI ~ ., scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size=9), axis.title = element_text(size = 11), axis.text = element_text(size = 10), text = element_text(size = 10), strip.background = element_blank(), strip.placement = "outside")
+```

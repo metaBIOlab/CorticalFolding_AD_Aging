@@ -1,0 +1,500 @@
+---
+title: "Manuscript 1 from Fernanda Hansen P. de Moraes Thesis - Cortical folding alterations in humans due to aging and diseases"
+author: "Fernanda Hansen Pacheco de Moraes"
+date: "1 dec 2021"
+output:
+  html_document: 
+    fig_caption: yes
+    fig_width: 8
+    number_sections: yes
+    theme: paper
+    toc: yes
+editor_options: 
+  chunk_output_type: inline
+  markdown: 
+    wrap: 72
+---
+
+Description of the procedures and analysis present in Manuscript 1,
+**Independent morphological correlates to aging, Mild Cognitive
+Impairment, and Alzheimer's Disease**, at the Doctorate Thesis presented
+to the Programa de Pós-Graduação em Ciências Médicas at the Instituto
+D'Or de Pesquisa e Ensino as a partial requirement to obtain the
+Doctorate Degree.
+
+Part of the data used here cannot be shared due to restrictions of the
+Ethic Committee. Data can be shared upon reasonable request to the
+corresponding author. To fulfill these limitation, we will generate
+random data to simulate the results.
+
+Get in touch with us
+([fernandahmoraes\@gmail.com](mailto:fernandahmoraes@gmail.com){.email})
+in case any help is needed, our aim is to improve the code as needed!
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE
+)
+```
+
+```{r working directory}
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
+```
+
+```{r functions, message=FALSE, warning=FALSE}
+## define functions
+
+# test angular coeficinet versus theoretical value
+test_coef <- function(reg, coefnum, val){
+  co <- coef(summary(reg))
+  tstat <- (co[coefnum,1] - val)/co[coefnum,2]
+  2 * pt(abs(tstat), reg$df.residual, lower.tail = FALSE)
+}
+
+# wrap text
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+```
+
+```{r call packages}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(ggpubr)
+library(kableExtra)
+library(broom)
+library(MASS)
+library(cutpointr)
+library(ggstatsplot)
+library(effects)
+
+```
+
+```{r}
+# COLOR BLIND PALETTE WITH BLACK
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette2 <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# set seed for random process
+
+```{r}
+set.seed(1)
+```
+
+```{r import files}
+
+dados_datasetscomp_alldata <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/dados_paper1.csv")
+
+# dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv", 
+#     locale = locale(decimal_mark = ",", grouping_mark = "."))
+
+AHEAD <- read_csv("AHEAD.csv")
+
+ADNI <- ADNI <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/ADNI.csv")
+
+ADNICTL <- ADNICTL <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/ADNICTL.csv")
+
+# IDOR <- read_csv("dados_raw.csv")
+
+# AOMICPIOP1 <- read_csv("AOMICPIOP1.csv", locale = locale(decimal_mark = ",", 
+#     grouping_mark = "."))
+
+# dados_wang <- read_csv("dados_wang.csv", locale = locale(decimal_mark = ",",      grouping_mark = "."))
+```
+
+```{r}
+## AHEAD age is defined as intervals, here we will use the mean value of each interval
+
+AHEAD <- AHEAD %>%
+  mutate(Age = as.double((
+    as.double(str_sub(Group, 1, 2)) + as.double(str_sub(Group, 4, 5))
+  ) / 2),
+  Diagnostic = "CTL",
+  SUBJ = ScanName,
+  Sample = "AHEAD")
+
+AHEAD$ROI[AHEAD$ROI == "1"] <- "F"
+AHEAD$ROI[AHEAD$ROI == "2"] <- "P"
+AHEAD$ROI[AHEAD$ROI == "3"] <- "T"
+AHEAD$ROI[AHEAD$ROI == "4"] <- "O"
+
+AHEAD <- AHEAD %>%
+  filter(ROI == "F" | ROI == "P"| ROI == "T"| ROI == "O" | ROI == "hemisphere") %>%
+  dplyr::select(-c(ScanName, Group))
+
+ADNIAD <- ADNI %>%
+  mutate(SUBJ = SubjectID, Diagnostic = "AD") %>%
+  dplyr::select(c(SUBJ, Age, Diagnostic))
+
+ADNICTL <- ADNICTL %>%
+    # filter(AvgCorticalThickness_lh != 0) %>%
+  mutate(SUBJ = SubjectID, Diagnostic = "CTL") %>%
+  dplyr::select(c(SUBJ, Age, Diagnostic))
+
+# AOMICPIOP1$Age <- as.double(AOMICPIOP1$age)
+
+# AOMICPIOP1 <- AOMICPIOP1 %>%
+#   mutate(Age = as.double(age),
+#          Diagnostic = "CTL",
+#          Sample = "AOMICPIOP1",
+#          SUBJ = participant_id) %>%
+#   dplyr::select(-c(age))
+
+# IDOR$Age <- as.double(IDOR$Age)
+
+# IDOR <- IDOR %>%
+#   filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
+#                           ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
+#                           Session == 1,
+#          Diagnostic == "CONTROLE" | Diagnostic == "ALZ" | Diagnostic == "CCL") %>% # use only data from Session 1
+#   droplevels() %>% # delete factor levels
+#   mutate(Sample = "IDOR")
+```
+
+```{r}
+dados_datasetscomp_alldata_ADNI <- filter(dados_datasetscomp_alldata, Sample == "ADNI")
+
+ADNI <- full_join(ADNIAD, ADNICTL)
+
+dados_datasetscomp_alldata_ADNI <- inner_join(dados_datasetscomp_alldata_ADNI, ADNI) %>%
+  unique()
+
+dados_datasetscomp_alldata <- dados_datasetscomp_alldata %>%
+  filter(Sample != "ADNI") %>%
+  full_join(dados_datasetscomp_alldata_ADNI)
+
+# AHEAD$AvgThickness <- as.double(AHEAD$AvgThickness)
+# AHEAD$ExposedArea <- as.double(AHEAD$ExposedArea)
+
+dados_raw <- full_join(AHEAD, dados_datasetscomp_alldata)
+# dados_raw <- full_join(IDOR, AOMICPIOP1) %>%
+#   full_join(AHEAD) %>%
+#   full_join(dados_wang)
+```
+
+```{r create new variables}
+# estimate cortical folding variables
+dados_raw <- dados_raw %>%
+  mutate(
+    # create new variables
+    logAvgThickness = log10(AvgThickness),
+    logTotalArea = log10(TotalArea),
+    logExposedArea = log10(ExposedArea),
+    localGI = TotalArea / ExposedArea,
+    k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
+    K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+    I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
+    TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
+    ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
+    logTotalArea_corrected = log10(TotalArea_corrected),
+    logExposedArea_corrected = log10(ExposedArea_corrected),
+    localGI_corrected = ifelse(
+      ROI == "hemisphere",
+      TotalArea / ExposedArea,
+      TotalArea_corrected / ExposedArea_corrected
+    ),
+    k_corrected = ifelse(
+      ROI == "hemisphere",
+      sqrt(AvgThickness) * log10(TotalArea) / (log10(ExposedArea) ^ 1.25),
+      sqrt(AvgThickness) * log10(TotalArea_corrected) / (log10(ExposedArea_corrected ^
+                                                                 1.25))
+    ),
+    K_corrected =  ifelse(
+      ROI == "hemisphere",
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea_corrected) - 5 / 4 * log10(ExposedArea_corrected)
+    ),
+    I_corrected = ifelse(
+      ROI == "hemisphere",
+      log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2) ,
+      log10(TotalArea_corrected) + log10(ExposedArea_corrected) + log10(AvgThickness ^ 2)
+    ),
+    S_corrected = ifelse(
+      ROI == "hemisphere",
+      3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+      3 / 2 * log10(TotalArea_corrected) + 3 / 4 * log10(ExposedArea_corrected) - 9 /  4 * log10(AvgThickness ^ 2)
+    ),
+    Knorm = K_corrected / sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2),
+    Snorm = S_corrected / sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2),
+    Inorm = I_corrected / sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1)
+  )
+
+## Rename ROIs
+dados_raw$ROI[dados_raw$ROI == "X1" | dados_raw$ROI == "1"] <- "F"
+dados_raw$ROI[dados_raw$ROI == "X2" | dados_raw$ROI == "2"] <- "P"
+dados_raw$ROI[dados_raw$ROI == "X3" | dados_raw$ROI == "3"] <- "T"
+dados_raw$ROI[dados_raw$ROI == "X4" | dados_raw$ROI == "4"] <- "O"
+# dados_raw$nROI[dados_raw$nROI == "X5"] <- "Insula"
+
+dados_raw <- dados_raw %>%
+  filter(ROI == "F" | ROI == "P" | ROI == "T"| ROI == "O" | ROI == "hemisphere")
+
+# create age intervals
+dados_raw$Age_interval <- cut(dados_raw$Age,
+                                       breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100),
+                                       right = FALSE,
+                                       include.lowest = TRUE)
+
+dados_raw$Age_interval10 <- cut(dados_raw$Age,
+                                         breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+                                         right = FALSE,
+                                         include.lowest = TRUE)
+```
+
+```{r data cleanup}
+dados_all <- dados_raw %>% filter(
+  !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea), !is.na(Age), AvgThickness != 0) %>%
+  droplevels()
+
+dados <- dados_all
+
+dados <- filter(dados, Sample == "IDOR")
+```
+
+```{r}
+# rename diagnostics
+dados$Diagnostic[dados$Diagnostic == "CONTROLE"] <- "CTL"
+dados$Diagnostic[dados$Diagnostic == "ALZ"] <- "AD"
+dados$Diagnostic[dados$Diagnostic == "CCL"] <- "MCI"
+dados$Diagnostic <- factor(dados$Diagnostic, levels = c("AD", "MCI","CTL"))
+```
+
+```{r}
+dados_v1 <- filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere") %>%
+  droplevels()
+
+# lobe data
+dados_lobos_v1 <- unique(filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  SUBJ != "SUBJ211", SUBJ != "SUBJ223")) %>%
+  droplevels()
+
+# hemisphere data
+dados_hemi_v1 <- unique(filter(dados, ROI == "hemisphere"))
+```
+
+# Data description
+
+```{r N subj, echo=FALSE, message=FALSE, warning=FALSE}
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ)
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+
+dados_hemi_v1 %>%
+  group_by(Sample, Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
+    # ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2)),
+    T =  paste(signif(mean(AvgThickness), 2), "±", signif(sd(AvgThickness), 2)),
+    AT =  paste(signif(mean(TotalArea), 2), "±", signif(sd(TotalArea), 2)),
+    AE =  paste(signif(mean(ExposedArea), 2), "±", signif(sd(ExposedArea), 2)),
+    # k =  paste(signif(mean(k), 2), "±", signif(sd(k), 2)),
+    K =  paste(signif(mean(K), 2), "±", signif(sd(K), 2)),
+    S =  paste(signif(mean(S), 2), "±", signif(sd(S), 2)),
+    I =  paste(signif(mean(I), 2), "±", signif(sd(I), 2))
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+
+dados_hemi_v1 %>%
+  group_by(Sample, Diagnostic, Gender) %>%
+  summarise(
+    N = n_distinct(SUBJ)
+  ) %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
+# Supplementary Note - LDA Test
+
+```{r}
+calcAllocationRuleAccuracy <- function(ldavalue, groupvariable, cutoffpoints)
+  {
+     # find out how many values the group variable can take
+     groupvariable2 <- as.factor(groupvariable[[1]])
+     levels <- levels(groupvariable2)
+     numlevels <- length(levels)
+     # calculate the number of true positives and false negatives for each group
+     numlevels <- length(levels)
+     for (i in 1:numlevels)
+     {
+        leveli <- levels[i]
+        levelidata <- ldavalue[groupvariable==leveli]
+        # see how many of the samples from this group are classified in each group
+        for (j in 1:numlevels)
+        {
+           levelj <- levels[j]
+           if (j == 1)
+           {
+              cutoff1 <- cutoffpoints[1]
+              cutoff2 <- "NA"
+              results <- summary(levelidata <= cutoff1)
+           }
+           else if (j == numlevels)
+           {
+              cutoff1 <- cutoffpoints[(numlevels-1)]
+              cutoff2 <- "NA"
+              results <- summary(levelidata > cutoff1)
+           }
+           else
+           {
+              cutoff1 <- cutoffpoints[(j-1)]
+              cutoff2 <- cutoffpoints[(j)]
+              results <- summary(levelidata > cutoff1 & levelidata <= cutoff2)
+           }
+           trues <- results["TRUE"]
+           trues <- trues[[1]]
+           print(paste("Number of samples of group",leveli,"classified as group",levelj," : ",
+              trues,"(cutoffs:",cutoff1,",",cutoff2,")"))
+        }
+     }
+  }
+```
+
+## PCA
+
+```{r}
+data <- dados_hemi_v1 %>%
+  mutate(logT2 = log(AvgThickness^2),
+         logAT = log(TotalArea),
+         logAE = log(ExposedArea)) %>%
+  dplyr::select(c(SUBJ, Age, Diagnostic, logT2, logAT, logAE))
+```
+
+### T, AT, AE
+
+```{r}
+
+standardised <- as.data.frame(scale(data[4:6])) # standardise the variables
+wine.pca <- prcomp(standardised)
+summary(wine.pca)
+
+```
+
+```{r}
+screeplot(wine.pca, type="lines")
+```
+
+#### Component 1
+
+```{r}
+wine.pca$rotation[,1]
+```
+
+#### Component 2
+
+```{r}
+wine.pca$rotation[,2]
+```
+
+#### Component 3
+
+```{r}
+wine.pca$rotation[,3]
+```
+
+```{r}
+plot(wine.pca$x[,1],wine.pca$x[,2], col = data$Diagnostic)
+```
+
+#### LDA
+
+```{r}
+wine.lda <- lda(data$Diagnostic ~ data$logT2 + data$logAT + data$logAE)
+
+wine.lda
+```
+
+```{r}
+wine.lda.values <- predict(wine.lda, dados_hemi_v1)
+```
+
+```{r}
+ldahist(data = wine.lda.values$x[,1], g=dados_hemi_v1$Diagnostic)
+```
+
+```{r}
+ldahist(data = wine.lda.values$x[,2], g=dados_hemi_v1$Diagnostic)
+```
+
+```{r}
+plot(wine.lda.values$x[,1],wine.lda.values$x[,2]) # make a scatterplot
+text(wine.lda.values$x[,1],wine.lda.values$x[,2],dados_hemi_v1$Diagnostic,cex=0.7,pos=4,col="red")
+```
+
+```{r}
+calcAllocationRuleAccuracy(wine.lda.values$x[,1], dados_hemi_v1$Diagnostic, c((wine.lda$scaling[1,1]+wine.lda$scaling[2,1])/2, (wine.lda$scaling[2,1]+wine.lda$scaling[3,1])/2))
+```
+
+### K, S, I
+
+```{r}
+
+standardised <- as.data.frame(scale(dados_hemi_v1[37:39])) # standardise the variables
+wine.pca <- prcomp(standardised)
+summary(wine.pca)
+
+```
+
+```{r}
+screeplot(wine.pca, type="lines")
+```
+
+#### Component 1
+
+```{r}
+wine.pca$rotation[,1]
+```
+
+#### Component 2
+
+```{r}
+wine.pca$rotation[,2]
+```
+
+#### Component 3
+
+```{r}
+wine.pca$rotation[,3]
+```
+
+```{r}
+plot(wine.pca$x[,1],wine.pca$x[,2], col = data$Diagnostic)
+```
+
+#### LDA
+
+```{r}
+wine.lda <- lda(dados_hemi_v1$Diagnostic ~ dados_hemi_v1$K + dados_hemi_v1$S + dados_hemi_v1$I)
+
+wine.lda
+```
+
+```{r}
+wine.lda.values <- predict(wine.lda, dados_hemi_v1)
+```
+
+```{r}
+ldahist(data = wine.lda.values$x[,1], g=dados_hemi_v1$Diagnostic)
+```
+
+```{r}
+ldahist(data = wine.lda.values$x[,2], g=dados_hemi_v1$Diagnostic)
+```
+
+```{r}
+plot(wine.lda.values$x[,1],wine.lda.values$x[,2], col = dados_hemi_v1$Diagnostic) # make a scatterplot
+text(wine.lda.values$x[,1],wine.lda.values$x[,2],dados_hemi_v1$Diagnostic,cex=0.7,pos=4,col="red")
+```
+
+```{r}
+calcAllocationRuleAccuracy(wine.lda.values$x[,1], dados_hemi_v1$Diagnostic, c((wine.lda$scaling[1,1]+wine.lda$scaling[2,1])/2, (wine.lda$scaling[2,1]+wine.lda$scaling[3,1])/2))
+```
