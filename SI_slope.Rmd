@@ -39,7 +39,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/CorticalFolding_AD_Aging")
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -84,22 +84,23 @@ set.seed(1)
 
 ```{r import files}
 
-dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv", 
-    locale = locale(decimal_mark = ",", grouping_mark = "."))
+dados_datasetscomp_alldata <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/dados_paper1.csv")
 
-AHEAD <- read_csv("AHEAD.csv", locale = locale(decimal_mark = ",", 
-    grouping_mark = "."))
+# dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv", 
+#     locale = locale(decimal_mark = ",", grouping_mark = "."))
 
-ADNI <- ADNI <- read_csv("~/GitHub/CorticalFolding_AD_Aging/ADNI.csv")
+AHEAD <- read_csv("AHEAD.csv")
 
-ADNICTL <- ADNICTL <- read_csv("~/GitHub/CorticalFolding_AD_Aging/ADNICTL.csv")
+ADNI <- ADNI <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/ADNI.csv")
+
+ADNICTL <- ADNICTL <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/ADNICTL.csv")
 
 # IDOR <- read_csv("dados_raw.csv")
+
 # AOMICPIOP1 <- read_csv("AOMICPIOP1.csv", locale = locale(decimal_mark = ",", 
 #     grouping_mark = "."))
 
-# dados_wang <- read_csv("dados_wang.csv", locale = locale(decimal_mark = ",", 
-#     grouping_mark = "."))
+# dados_wang <- read_csv("dados_wang.csv", locale = locale(decimal_mark = ",",      grouping_mark = "."))
 ```
 
 ```{r}
@@ -110,7 +111,17 @@ AHEAD <- AHEAD %>%
     as.double(str_sub(Group, 1, 2)) + as.double(str_sub(Group, 4, 5))
   ) / 2),
   Diagnostic = "CTL",
-  SUBJ = ScanName)
+  SUBJ = ScanName,
+  Sample = "AHEAD")
+
+AHEAD$ROI[AHEAD$ROI == "1"] <- "F"
+AHEAD$ROI[AHEAD$ROI == "2"] <- "P"
+AHEAD$ROI[AHEAD$ROI == "3"] <- "T"
+AHEAD$ROI[AHEAD$ROI == "4"] <- "O"
+
+AHEAD <- AHEAD %>%
+  filter(ROI == "F" | ROI == "P"| ROI == "T"| ROI == "O" | ROI == "hemisphere") %>%
+  dplyr::select(-c(ScanName, Group))
 
 ADNIAD <- ADNI %>%
   mutate(SUBJ = SubjectID, Diagnostic = "AD") %>%
@@ -122,15 +133,16 @@ ADNICTL <- ADNICTL %>%
   dplyr::select(c(SUBJ, Age, Diagnostic))
 
 # AOMICPIOP1$Age <- as.double(AOMICPIOP1$age)
+
 # AOMICPIOP1 <- AOMICPIOP1 %>%
 #   mutate(Age = as.double(age),
 #          Diagnostic = "CTL",
 #          Sample = "AOMICPIOP1",
 #          SUBJ = participant_id) %>%
 #   dplyr::select(-c(age))
-#   
+
 # IDOR$Age <- as.double(IDOR$Age)
-# 
+
 # IDOR <- IDOR %>%
 #   filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
 #                           ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
@@ -142,14 +154,20 @@ ADNICTL <- ADNICTL %>%
 
 ```{r}
 dados_datasetscomp_alldata_ADNI <- filter(dados_datasetscomp_alldata, Sample == "ADNI")
+
 ADNI <- full_join(ADNIAD, ADNICTL)
+
 dados_datasetscomp_alldata_ADNI <- inner_join(dados_datasetscomp_alldata_ADNI, ADNI) %>%
   unique()
+
 dados_datasetscomp_alldata <- dados_datasetscomp_alldata %>%
   filter(Sample != "ADNI") %>%
   full_join(dados_datasetscomp_alldata_ADNI)
 
-dados_raw <- full_join(dados_datasetscomp_alldata, AHEAD)
+# AHEAD$AvgThickness <- as.double(AHEAD$AvgThickness)
+# AHEAD$ExposedArea <- as.double(AHEAD$ExposedArea)
+
+dados_raw <- full_join(AHEAD, dados_datasetscomp_alldata)
 # dados_raw <- full_join(IDOR, AOMICPIOP1) %>%
 #   full_join(AHEAD) %>%
 #   full_join(dados_wang)
@@ -166,12 +184,8 @@ dados_raw <- dados_raw %>%
     localGI = TotalArea / ExposedArea,
     k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
     K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
-    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^
-                                                                                 2) ,
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
     I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
-    c = as.double(ifelse(
-      ROI == "hemisphere", NA, 4 * pi / GaussianCurvature
-    )),
     TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
     ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
     logTotalArea_corrected = log10(TotalArea_corrected),
@@ -353,6 +367,16 @@ ggsave(
 )
 
 ggsave(
+  "fig1a.eps",
+  plot = fig1a,
+  dpi = 1200,
+  width = 8.7,
+  height = 11,
+  units = "cm",
+  device = "eps"
+)
+
+ggsave(
   "fig1a.png",
   plot = fig1a,
   dpi = 1200,
@@ -452,6 +476,16 @@ ggsave(
   height = 12,
   units = "cm",
   device = "pdf"
+)
+
+ggsave(
+  "figS3.eps",
+  plot = figS3,
+  dpi = 1200,
+  width = 17.8,
+  height = 12,
+  units = "cm",
+  device = "eps"
 )
 
 ggsave(
@@ -626,6 +660,15 @@ ggsave(
 )
 
 ggsave(
+  "figS4.eps",
+  dpi = 1200,
+  width = 17.8,
+  height = 9,
+  units = "cm",
+  device = "eps"
+)
+
+ggsave(
   "figS4.png",
   dpi = 1200,
   width = 17.8,
@@ -694,6 +737,15 @@ ggsave(
   height = 11.4,
   units = "cm",
   device = "pdf"
+)
+
+ggsave(
+  "figS5.eps",
+  dpi = 1200,
+  width = 11.4,
+  height = 11.4,
+  units = "cm",
+  device = "eps"
 )
 
 ggsave(
@@ -818,6 +870,16 @@ ggsave(
   height = 22,
   units = "cm",
   device = "pdf"
+)
+
+ggsave(
+  "figS6.eps",
+  plot = figS6,
+  dpi = 1200,
+  width = 17.8,
+  height = 22,
+  units = "cm",
+  device = "eps"
 )
 
 ggsave(
