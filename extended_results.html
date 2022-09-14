@@ -63,6 +63,7 @@ if (window.hljs) {
 
 
 
+
 <style type="text/css">
 .main-container {
   max-width: 940px;
@@ -83,6 +84,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -1075,13 +1079,13 @@ ggsave(
 )
 
 ggsave(
-  &quot;figs1.png&quot;,
+  &quot;figs1.eps&quot;,
   plot = figs1,
   dpi = 1200,
   width = 14,
   height = 11,
   units = &quot;cm&quot;,
-  device = &quot;png&quot;
+  device = &quot;eps&quot;
 )</code></pre>
 <pre class="r"><code>figs1</code></pre>
 <div class="figure">
@@ -1326,13 +1330,13 @@ ggsave(
 )
 
 ggsave(
-  &quot;figs2.png&quot;,
+  &quot;figs2.eps&quot;,
   plot = figs2,
   dpi = 1200,
   width = 17.8,
   height = 22,
   units = &quot;cm&quot;,
-  device = &quot;png&quot;
+  device = &quot;eps&quot;
 )</code></pre>
 <p><strong>Figure S2</strong></p>
 <pre class="r"><code>figs2</code></pre>

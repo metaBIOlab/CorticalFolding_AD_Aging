@@ -561,13 +561,13 @@ ggsave(
 )
 
 ggsave(
-  "figs1.png",
+  "figs1.eps",
   plot = figs1,
   dpi = 1200,
   width = 14,
   height = 11,
   units = "cm",
-  device = "png"
+  device = "eps"
 )
 ```
 
@@ -755,13 +755,13 @@ ggsave(
 )
 
 ggsave(
-  "figs2.png",
+  "figs2.eps",
   plot = figs2,
   dpi = 1200,
   width = 17.8,
   height = 22,
   units = "cm",
-  device = "png"
+  device = "eps"
 )
 ```
 
