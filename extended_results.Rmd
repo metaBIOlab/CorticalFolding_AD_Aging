@@ -9,6 +9,7 @@ output:
     number_sections: yes
     theme: paper
     toc: yes
+    toc_depth: 6
 editor_options: 
   chunk_output_type: inline
 ---
@@ -39,7 +40,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/CorticalFolding_AD_Aging")
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -76,7 +77,6 @@ library(compute.es)
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 cbbPalette2 <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
-
 
 # set seed for random process
 
@@ -1155,6 +1155,41 @@ Corr2 <- dados_hemi_v1_CD_biochq %>%
 
 
 ```
+
+```{r}
+ ggplot(dados_hemi_v1, aes(x = `AB1-42`, y = K, alpha = 0.4)) +
+  geom_point(aes(color = Diagnostic, fill = Diagnostic)) +
+  geom_smooth(method = "lm") + 
+  stat_cor() + 
+  theme_pubr() +
+  guides(alpha = "none", linetype = "none") +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+```
+
+```{r}
+ ggplot(dados_hemi_v1, aes(x = `AB1-42`, y = K_age_decay, alpha = 0.4)) +
+  geom_point(aes(color = Diagnostic, fill = Diagnostic)) +
+  geom_smooth(method = "lm") + 
+  stat_cor() + 
+  theme_pubr() +
+  guides(alpha = "none", linetype = "none") +
+  theme(
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    text = element_text(size = 10)
+  ) +
+  scale_fill_manual(values=cbbPalette2) +
+  scale_colour_manual(values=cbbPalette2)
+
+```
+
 
 ### Frontal
 

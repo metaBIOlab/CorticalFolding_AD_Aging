@@ -9,6 +9,7 @@ output:
     number_sections: yes
     theme: paper
     toc: yes
+    toc_depth: 6
 editor_options: 
   chunk_output_type: inline
 ---
@@ -32,7 +33,7 @@ in case any help is needed, our aim is to improve the code as needed!
 # RMARKDOWN AND R SETUP
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-	echo = FALSE,
+	echo = TRUE,
 	message = FALSE,
 	warning = FALSE,
 	cache = TRUE
@@ -72,7 +73,6 @@ library(car)
 # library(multcomp)
 library(emmeans)
 library(compute.es)
-
 ```
 
 ```{r} 
@@ -612,8 +612,8 @@ fig2a <- ggplot(dados_hemi_v1,
                 na.action = na.omit
               ))[1],
               color = "black") +
-  labs(x = expression('log'[10] * 'A'['E']),
-       y = expression('log'[10] * 'A'['T'] * sqrt('T'))) +
+  labs(x = bquote(log[10]*A[E] ~ "["*mm^2*"]"),
+       y = bquote(log[10]*A[T]*sqrt(T) ~ "["*mm^(3/2)*"]")) +
   guides(alpha = "none") +
   theme_pubr() +
   scale_x_continuous(limits = c(4.45, 4.65)) +
@@ -627,7 +627,7 @@ fig1b <- ggplot(data = dados_hemi_v1, aes(Age, K, color = Diagnostic, fill = Dia
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
     guides(alpha = "none", color = "none", fill = "none") + 
-  labs(x = "Age [years]") +
+  labs(x = "Age [years]", y = "K [dimentionless]") +
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 ```
@@ -643,9 +643,9 @@ fig1_alt_2 <-
     legend = "bottom"
   )
 
-ggsave("fig1_alt_2.pdf", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "pdf")
-ggsave("fig1_alt_2.eps", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "eps")
-ggsave("fig1_alt_2.png", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "png")
+ggsave("Figure1.pdf", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "pdf")
+ggsave("Figure1.eps", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "eps")
+ggsave("Figure1.png", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "png")
 #ggsave("fig1_alt_2.pdf", plot = fig1_alt_2, dpi=1200, width = 9, height = 11.37, units = "cm", device = "pdf")
 ```
 

@@ -1,0 +1,179 @@
+---
+title: "subjects_descripton_flowchart"
+author: "Fernanda Hansen Pacheco de Moraes"
+date: "2023-01-16"
+output:
+  html_document: 
+    fig_width: 8
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 6
+editor_options: 
+  chunk_output_type: inline
+---
+
+# RMARKDOWN AND R SETUP
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE
+)
+```
+
+```{r working directory}
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
+```
+
+```{r call packages}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(dtrackr)
+library(ggpubr)
+```
+
+# set seed for random process
+
+```{r}
+set.seed(1)
+```
+
+# import subjs info
+
+```{r}
+subjects <- read_csv(
+  "tabela_sujeitos.csv",
+  col_types = cols(
+    ...1 = col_skip(),
+    age = col_skip(),
+    dob = col_skip(),
+    SUBJ = col_skip(),
+    Session = col_skip(),
+    Gender = col_skip(),
+    birthday = col_skip(),
+    acq_date = col_skip(),
+    Birthdate = col_skip(),
+    NeuroQuant = col_skip(),
+    Lipoxina = col_skip()
+  )
+) %>%
+  mutate(SUBJ = str_sub(participant_id, 5, 11),
+         Session = as.double(str_sub(session_id, 5, 5)))
+```
+
+Translate Diagnostics labels to English
+
+```{r}
+subjects$Diagnostic[subjects$Diagnostic == "CONTROLE"] <- "CTL"
+subjects$Diagnostic[subjects$Diagnostic == "ALZ"] <- "AD"
+subjects$Diagnostic[subjects$Diagnostic == "CCL"] <- "MCI"
+
+subjects$Diagnostic <- factor(subjects$Diagnostic, levels = c("AD", "MCI","CTL"))
+
+```
+
+Merging with morphometrical data to ensure FreeSurfer completition + clinical and CSF data
+
+```{r}
+dados_raw <- read_csv("dados_raw.csv") %>%
+  filter(hemi == "L", ROI == "hemisphere")  %>% # here I selected results for the left hemisphere and ROI the complete hemisphere
+  dplyr::select(c(SUBJ, Session, AvgThickness, ExposedArea))
+
+subjects <- full_join(subjects, dados_raw)
+```
+
+Import aseg stats table to include the mean Euler Number (mean between hemispheres).
+
+```{r}
+aseg_vol <- read_table("aseg_vol.txt") %>%
+  dplyr::select(c(`Measure:volume`, lhSurfaceHoles, rhSurfaceHoles))
+```
+
+```{r}
+EulerNumber <- read_table("aseg_vol.txt") %>%
+  mutate(
+    SUBJ = str_split(`Measure:volume`, "/", simplify = TRUE)[, 1],
+    LongitudinalCorrection = ifelse(str_sub(
+      str_split(`Measure:volume`, "/", simplify = TRUE)[,2], 15, 18
+    ) == "long", "yes", "no"),
+    Session = as.double(str_sub(str_split(`Measure:volume`, "/", simplify = TRUE)[, 2], 13, 13)),
+    lhEulerNumber = 2 - 2 * lhSurfaceHoles,
+    rhEulerNumber = 2 - 2 * rhSurfaceHoles,
+    meanEulerNumber = (lhEulerNumber + rhEulerNumber) / 2
+  ) %>%
+  filter(LongitudinalCorrection == "yes") %>%
+  dplyr::select(c(SUBJ, Session, lhEulerNumber, rhEulerNumber, meanEulerNumber)) %>%
+  unique()
+  
+subjects <- full_join(subjects, EulerNumber) %>%
+  unique()
+
+medianEulerNumber <- subjects %>%
+  group_by(Diagnostic) %>%
+  mutate(median_EulerNumber = median(meanEulerNumber)) %>%
+  unique()
+
+subjects <- full_join(subjects, medianEulerNumber) %>%
+  mutate(meanEulerNumber_norm = sqrt(-1*(meanEulerNumber - median_EulerNumber))) %>%
+  unique()
+
+```
+
+# Euler number
+
+```{r}
+ggplot(subjects, aes(x = SUBJ, y = meanEulerNumber, color = Diagnostic)) + 
+  geom_point() +
+  theme_pubr()
+
+ggplot(subjects, aes(x = Diagnostic, y = meanEulerNumber, color = Diagnostic)) + 
+  geom_boxplot() +
+  theme_pubr()
+```
+
+# Visual quality Control
+
+```{r}
+
+```
+
+
+# inclusion/exclusion criteria
+
+All subjects included must have:
+- been scanned at Philips Achieva 3T (to unify the acquisition setup);
+- Diagnostic equal to Healthy Controls, Mild Cognitive Impairment and Alzheimer's Disease, without any other diagnostic;
+- As a cross-sectional study, we selected the first acquisition (ses-1), if there are more than one;
+- Subjects with processing errors on FreeSurfer (meaning here no results ExposedArea) were excluded.
+
+```{r}
+dataset1 = subjects %>%
+  track("Starts with {.count} acquistions") %>%
+  include_any(Session == "1"  ~ "{.included} first sessions only",
+                  machine == "Philips-Achieva"  ~ "{.included} subjects acquired with Philips Achieva 3T") %>%
+  include_any(
+    Diagnostic == "CTL" |
+      Diagnostic == "MCI" |
+      Diagnostic == "AD"  ~ "{.included} subjects with the selected diagnostics (CTL, MCI or AD)"
+  ) %>%
+  group_by(Diagnostic) %>%
+  comment("{Diagnostic} has {.count} subjects") %>%
+  include_any(ESC == 8 |
+                ESC > 8  ~ "{.included} years of education => 8") %>%
+  include_any(
+    !is.na(ExposedArea) ~ "{.included} with results for ExposedArea"
+  ) %>%
+  ungroup(.messages = "Ends with {.total} subjects")
+
+dataset1 %>% flowchart()
+
+```
+```{r}
+subj_names <- dataset1 %>% dplyr::select(c(SUBJ)) 
+subj_names <- lapply(subj_names,sort)
+subj_names
+```
+
