@@ -67,13 +67,14 @@ library(MASS)
 library(cutpointr)
 library(ggstatsplot)
 library(effects)
+library(readxl)
 
 ```
 
 ```{r} 
 # COLOR BLIND PALETTE WITH BLACK
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-cbbPalette2 <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette2 <- c("#E69F00", "#56B4E9", "#0072B2", "#CC79A7", "#009E73", "#F0E442")
 ```
 
 # set seed for random process
@@ -83,24 +84,27 @@ set.seed(1)
 ```
 
 ```{r import files}
+dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv")
 
-dados_datasetscomp_alldata <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/dados_paper1.csv")
+dados_raw <- read_csv("dados_v1.csv") %>%
+  mutate(ABETA = `AB1-42`,
+         Sample = "IDOR")
 
-# dados_datasetscomp_alldata <- read_csv("dados_datasetscomp_alldata.csv", 
-#     locale = locale(decimal_mark = ",", grouping_mark = "."))
+dados_ADNI <- read_csv("dados_ADNI.csv", 
+    col_types = cols(...1 = col_skip())) %>%
+  mutate(Sample = "ADNI",
+         ROI = "hemisphere")
+
+dados_datasetscomp <- full_join(dados_raw, dados_ADNI) %>%
+  filter(ROI == "hemisphere") %>%
+  dplyr::select(c(SUBJ, Age, Gender, Diagnostic, hemi, ROI, AvgThickness, TotalArea, ExposedArea, Sample)) %>%
+  droplevels()
+
+dados_datasetscomp$Diagnostic <- factor(dados_datasetscomp$Diagnostic, levels = c("AD", "MCI","CTL"))
 
 AHEAD <- read_csv("AHEAD.csv")
 
-ADNI <- ADNI <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/ADNI.csv")
-
-ADNICTL <- ADNICTL <- read_csv("D:/GitHub/CorticalFolding_AD_Aging/ADNICTL.csv")
-
-# IDOR <- read_csv("dados_raw.csv")
-
-# AOMICPIOP1 <- read_csv("AOMICPIOP1.csv", locale = locale(decimal_mark = ",", 
-#     grouping_mark = "."))
-
-# dados_wang <- read_csv("dados_wang.csv", locale = locale(decimal_mark = ",",      grouping_mark = "."))
+AOMICPIOP1 <- read_csv("AOMICPIOP1.csv")
 ```
 
 ```{r}
@@ -123,59 +127,45 @@ AHEAD <- AHEAD %>%
   filter(ROI == "F" | ROI == "P"| ROI == "T"| ROI == "O" | ROI == "hemisphere") %>%
   dplyr::select(-c(ScanName, Group))
 
-ADNIAD <- ADNI %>%
-  mutate(SUBJ = SubjectID, Diagnostic = "AD") %>%
-  dplyr::select(c(SUBJ, Age, Diagnostic))
-
-ADNICTL <- ADNICTL %>%
-    # filter(AvgCorticalThickness_lh != 0) %>%
-  mutate(SUBJ = SubjectID, Diagnostic = "CTL") %>%
-  dplyr::select(c(SUBJ, Age, Diagnostic))
-
-# AOMICPIOP1$Age <- as.double(AOMICPIOP1$age)
-
-# AOMICPIOP1 <- AOMICPIOP1 %>%
-#   mutate(Age = as.double(age),
-#          Diagnostic = "CTL",
-#          Sample = "AOMICPIOP1",
-#          SUBJ = participant_id) %>%
-#   dplyr::select(-c(age))
-
-# IDOR$Age <- as.double(IDOR$Age)
-
-# IDOR <- IDOR %>%
-#   filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
-#                           ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
-#                           Session == 1,
-#          Diagnostic == "CONTROLE" | Diagnostic == "ALZ" | Diagnostic == "CCL") %>% # use only data from Session 1
-#   droplevels() %>% # delete factor levels
-#   mutate(Sample = "IDOR")
 ```
 
 ```{r}
-dados_datasetscomp_alldata_ADNI <- filter(dados_datasetscomp_alldata, Sample == "ADNI")
+## AHEAD age is defined as intervals, here we will use the mean value of each interval
 
-ADNI <- full_join(ADNIAD, ADNICTL)
+AOMICPIOP1 <- AOMICPIOP1 %>%
+  mutate(Age = as.double(age), 
+         Diagnostic = "CTL",
+         SUBJ = participant_id,
+         Sample = "AOMICPIOP1")
 
-dados_datasetscomp_alldata_ADNI <- inner_join(dados_datasetscomp_alldata_ADNI, ADNI) %>%
-  unique()
+AOMICPIOP1$ROI[AOMICPIOP1$ROI == "1"] <- "F"
+AOMICPIOP1$ROI[AOMICPIOP1$ROI == "2"] <- "P"
+AOMICPIOP1$ROI[AOMICPIOP1$ROI == "3"] <- "T"
+AOMICPIOP1$ROI[AOMICPIOP1$ROI == "4"] <- "O"
 
+AOMICPIOP1 <- AOMICPIOP1 %>%
+  filter(ROI == "F" | ROI == "P"| ROI == "T"| ROI == "O" | ROI == "hemisphere") %>%
+    dplyr::select(c(SUBJ, Age, Gender, Diagnostic, hemi, ROI, AvgThickness, TotalArea, ExposedArea, Sample))
+
+```
+
+```{r}
 dados_datasetscomp_alldata <- dados_datasetscomp_alldata %>%
   filter(Sample != "ADNI") %>%
-  full_join(dados_datasetscomp_alldata_ADNI)
+  filter(Sample != "IDOR") %>%
+  full_join(dados_datasetscomp)
 
 # AHEAD$AvgThickness <- as.double(AHEAD$AvgThickness)
 # AHEAD$ExposedArea <- as.double(AHEAD$ExposedArea)
 
-dados_raw <- full_join(AHEAD, dados_datasetscomp_alldata)
-# dados_raw <- full_join(IDOR, AOMICPIOP1) %>%
-#   full_join(AHEAD) %>%
-#   full_join(dados_wang)
+dados_raw <- full_join(AHEAD, dados_datasetscomp_alldata) %>%
+  full_join(AOMICPIOP1)
+
 ```
 
 ```{r create new variables}
 # estimate cortical folding variables
-dados_raw <- dados_raw %>%
+dados <- dados_raw %>%
   mutate(
     # create new variables
     logAvgThickness = log10(AvgThickness),
@@ -222,51 +212,25 @@ dados_raw <- dados_raw %>%
   )
 
 ## Rename ROIs
-dados_raw$ROI[dados_raw$ROI == "X1" | dados_raw$ROI == "1"] <- "F"
-dados_raw$ROI[dados_raw$ROI == "X2" | dados_raw$ROI == "2"] <- "P"
-dados_raw$ROI[dados_raw$ROI == "X3" | dados_raw$ROI == "3"] <- "T"
-dados_raw$ROI[dados_raw$ROI == "X4" | dados_raw$ROI == "4"] <- "O"
+dados$ROI[dados$ROI == "X1" | dados$ROI == "1"] <- "F"
+dados$ROI[dados$ROI == "X2" | dados$ROI == "2"] <- "P"
+dados$ROI[dados$ROI == "X3" | dados$ROI == "3"] <- "T"
+dados$ROI[dados$ROI == "X4" | dados$ROI == "4"] <- "O"
 # dados_raw$nROI[dados_raw$nROI == "X5"] <- "Insula"
 
-dados_raw <- dados_raw %>%
-  filter(ROI == "F" | ROI == "P" | ROI == "T"| ROI == "O" | ROI == "hemisphere")
-
 # create age intervals
-dados_raw$Age_interval <- cut(dados_raw$Age,
+dados$Age_interval <- cut(dados$Age,
                                        breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100),
                                        right = FALSE,
                                        include.lowest = TRUE)
 
-dados_raw$Age_interval10 <- cut(dados_raw$Age,
+dados$Age_interval10 <- cut(dados$Age,
                                          breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
                                          right = FALSE,
                                          include.lowest = TRUE)
 ```
 
-```{r data cleanup}
-dados_all <- dados_raw %>% filter(
-  !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea), !is.na(Age), AvgThickness != 0) %>%
-  droplevels()
-
-dados <- dados_all
-```
-
 ```{r}
-# rename diagnostics
-dados$Diagnostic[dados$Diagnostic == "CONTROLE"] <- "CTL"
-dados$Diagnostic[dados$Diagnostic == "ALZ"] <- "AD"
-dados$Diagnostic[dados$Diagnostic == "CCL"] <- "MCI"
-dados$Diagnostic <- factor(dados$Diagnostic, levels = c("AD", "MCI","CTL"))
-```
-
-```{r}
-dados_v1 <- filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere") %>%
-  droplevels()
-
-# lobe data
-dados_lobos_v1 <- unique(filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  SUBJ != "SUBJ211", SUBJ != "SUBJ223")) %>%
-  droplevels()
-
 # hemisphere data
 dados_hemi_v1 <- unique(filter(dados, ROI == "hemisphere"))
 ```
@@ -355,26 +319,6 @@ fig1a <- ggplot(data = filter(lm_Age, term == "log10(ExposedArea)"),
   theme_pubr() +
   labs(y = "Slope", x = "Age [years]") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave(
-  "fig1a.pdf",
-  plot = fig1a,
-  dpi = 1200,
-  width = 8.7,
-  height = 11,
-  units = "cm",
-  device = "pdf"
-)
-
-ggsave(
-  "fig1a.eps",
-  plot = fig1a,
-  dpi = 1200,
-  width = 8.7,
-  height = 11,
-  units = "cm",
-  device = "eps"
-)
 
 ggsave(
   "fig1a.png",
@@ -467,26 +411,6 @@ figS3 <- ggplot(data = amostras_Coef,
     axis.text = element_text(size = 10),
     text = element_text(size = 10)
   )
-
-ggsave(
-  "figS3.pdf",
-  plot = figS3,
-  dpi = 1200,
-  width = 17.8,
-  height = 12,
-  units = "cm",
-  device = "pdf"
-)
-
-ggsave(
-  "figS3.eps",
-  plot = figS3,
-  dpi = 1200,
-  width = 17.8,
-  height = 12,
-  units = "cm",
-  device = "eps"
-)
 
 ggsave(
   "figS3.png",
@@ -651,24 +575,6 @@ figS4 <-
   )
 
 ggsave(
-  "figS4.pdf",
-  dpi = 1200,
-  width = 17.8,
-  height = 9,
-  units = "cm",
-  device = "pdf"
-)
-
-ggsave(
-  "figS4.eps",
-  dpi = 1200,
-  width = 17.8,
-  height = 9,
-  units = "cm",
-  device = "eps"
-)
-
-ggsave(
   "figS4.png",
   dpi = 1200,
   width = 17.8,
@@ -706,6 +612,8 @@ N_subj_diag <-
   group_by(Age_interval) %>%
   summarise(N_SUBJ = n_distinct(SUBJ))
 
+N_subj_diag
+
 figS5 <-
   ggplot(data = filter(Age_Coef_diag, term == "logExposedArea"),
          aes(x = Age_interval ,
@@ -729,24 +637,6 @@ figS5 <-
   ) +
   scale_fill_manual(values = cbbPalette2) +
   scale_colour_manual(values = cbbPalette2)
-
-ggsave(
-  "figS5.pdf",
-  dpi = 1200,
-  width = 11.4,
-  height = 11.4,
-  units = "cm",
-  device = "pdf"
-)
-
-ggsave(
-  "figS5.eps",
-  dpi = 1200,
-  width = 11.4,
-  height = 11.4,
-  units = "cm",
-  device = "eps"
-)
 
 ggsave(
   "figS5.png",
@@ -861,26 +751,6 @@ figS6 <-
     common.legend = TRUE,
     legend = "top"
   )
-
-ggsave(
-  "figS6.pdf",
-  plot = figS6,
-  dpi = 1200,
-  width = 17.8,
-  height = 22,
-  units = "cm",
-  device = "pdf"
-)
-
-ggsave(
-  "figS6.eps",
-  plot = figS6,
-  dpi = 1200,
-  width = 17.8,
-  height = 22,
-  units = "cm",
-  device = "eps"
-)
 
 ggsave(
   "figS6.png",
