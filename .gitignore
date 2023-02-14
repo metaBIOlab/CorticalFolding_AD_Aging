@@ -2,7 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
-*.csv
+dados_datasetscomp_alldata.csv
+dados_paper1.csv
+dados_raw.csv
+dados_v1.csv
+dataset1.csv
+tabela_sujeitos.csv
 *.rdb
 *.xls
 *_cache/*

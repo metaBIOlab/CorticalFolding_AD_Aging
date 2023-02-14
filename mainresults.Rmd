@@ -40,7 +40,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/CorticalFolding_AD_Aging")
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -678,7 +678,7 @@ cutpoint_b <- ggplot(dados_hemi_v1, aes(x = logAvgThickness, color = Diagnostic,
     theme(axis.title = element_text(size = 11),
           axis.text = element_text(size = 10), text = element_text(size = 10), legend.position = "none") +
     labs(x = expression('log'[10]*'T')) +
-    labs(x = expression('log'[10]*'T')) + scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
+    scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
     scale_fill_manual(values=cbbPalette2) +
     scale_colour_manual(values=cbbPalette2) +
     annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab2, size = 2)
