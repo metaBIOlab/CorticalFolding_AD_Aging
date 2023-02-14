@@ -69,7 +69,7 @@ library(cutpointr)
 library(ggstatsplot)
 library(effects)
 library(compute.es)
-
+library(readxl)
 ```
 
 ```{r} 
@@ -176,6 +176,20 @@ dados <- dados %>%
                           Session == 1) %>% # use only data from Session 1
   droplevels() # delete factor levels
 
+```
+
+Visual QC exclusion:
+```{r}
+VisualQC <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD.xlsx", 
+    sheet = "AD - IDOR ses 1 long", col_types = c("text", 
+        "text", "skip", "skip", "numeric", 
+        "skip", "skip", "skip", "skip", "text", 
+        "text")) %>%
+  dplyr::select(-c(session)) %>%
+  mutate(Session = 1)
+
+dados <- full_join(dados, VisualQC) %>%
+  filter(Classification == 1 | Classification == 2)
 ```
 
 # Deaging
@@ -551,24 +565,15 @@ figs1 <- ggplot(data = filter(aov_summary, `p adj` < 0.05 | `p adj` == 0.05), ae
   scale_colour_manual(values=cbbPalette2)
 
 ggsave(
-  "figs1.pdf",
+  "figs1.png",
   plot = figs1,
   dpi = 1200,
   width = 14,
   height = 11,
   units = "cm",
-  device = "pdf"
+  device = "png"
 )
 
-ggsave(
-  "figs1.eps",
-  plot = figs1,
-  dpi = 1200,
-  width = 14,
-  height = 11,
-  units = "cm",
-  device = "eps"
-)
 ```
 
 ```{r figureS1, fig.cap="\\label{fig:figureS1}Statistically significant (p<0.05) differences in mean levels with the 95% Confidence Interval of Diagnostics for K and log(AvgThickness), with (After age correction) and without (Raw data) age correction for the hemisphere and the four lobes. Multiple corrections were applied within each morphological feature and ROI.", fig.height=4.33, fig.width=5.51}
@@ -745,24 +750,15 @@ figs2 <-
   )
 
 ggsave(
-  "figs2.pdf",
+  "figs2.png",
   plot = figs2,
   dpi = 1200,
   width = 17.8,
   height = 22,
   units = "cm",
-  device = "pdf"
+  device = "png"
 )
 
-ggsave(
-  "figs2.eps",
-  plot = figs2,
-  dpi = 1200,
-  width = 17.8,
-  height = 22,
-  units = "cm",
-  device = "eps"
-)
 ```
 
 **Figure S2**

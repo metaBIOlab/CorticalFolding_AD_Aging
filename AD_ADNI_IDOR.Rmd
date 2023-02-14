@@ -2,7 +2,9 @@
 title: "AD_ADNI_IDOR"
 author: "Fernanda Hansen P. de Moraes"
 date: "23/06/2021"
-output: html_document
+output: 
+  html_document: 
+    toc: yes
 editor_options: 
   chunk_output_type: inline
 ---
@@ -16,48 +18,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r preparo, message=FALSE, warning=FALSE, include=FALSE}
-# PREPARO
-
-# define a area de trabalho
-setwd("C:/Users/ferna/Documents/idor/Gyrification/RRRRRR/comparing_samples/") # se no computador
-
-# carrega os pacotes utilizados
-source("01-call_packages.R")
-
-# Chama funcoes caso necessário
-source("02-funcoes.R")
-
-# onde estao os arquivos de resultados:
-path <- str_c("C:/Users/ferna/Documents/idor/Gyrification/STATS/long_tables/")
-
-path_yujiangscript <- str_c("C:/Users/ferna/Documents/idor/Gyrification/STATS/Wang_code_extraction/")
-
-path_yujiangscript_newsurfaces <- str_c("C:/Users/ferna/Documents/idor/Gyrification/STATS/Wang_code_extraction/")
-  
-path_lobes <- str_c("C:/Users/ferna/Documents/idor/Gyrification/STATS/LobesScaling/")
- 
-path_sessions <- str_c("C:/Users/ferna/Documents/idor/Gyrification/Processamento_longitudinal/V6/data/")
-
-Age.cor = 25
-
-# Prepara os dados para analise
-source("05-analises_prep_ADNI.R")
-
-dados_datasetscomp <- dados_datasetscomp %>%
-   filter(Sample == "ADNI" | Sample == "IDOR")  %>% 
-   # dplyr::select(c(machine, SUBJ, Age, Gender, Diagnostic, Sample, ROI, hemi, AvgThickness, TotalArea, ExposedArea, GMvolume, logAvgThickness, logTotalArea, logExposedArea, localGI, k, K, S, I, Knorm, Snorm, Inorm, c, TotalArea_corrected, ExposedArea_corrected, logTotalArea_corrected, logExposedArea_corrected, localGI_corrected, K_corrected, S_corrected, I_corrected, APOE4, MMSE, FLDSTRENG, FSVERSION, ABETA, TAU, PTAU, ABETA, localGI_age_decay, localGI_shiftc, localGI_age_decay_shiftc, K_age_decay, K_shiftc, K_age_decay_shiftc, I_age_decay, I_shiftc, I_age_decay_shiftc, S_age_decay, S_shiftc, S_age_decay_shiftc, Knorm_shiftc, Snorm_shiftc, Inorm_shiftc, Knorm_age_decay, Snorm_age_decay, Inorm_age_decay, Knorm_age_decay_shiftc, Snorm_age_decay_shiftc, Inorm_age_decay_shiftc, Age_interval10, Age_interval)) %>%
-   mutate(
-     ABETA = ifelse(Sample == "ADNI", ABETA, ABETA),
-     TAU = as.double(TAU))
-
-dados_datasetscomp$Diagnostic <- factor(dados_datasetscomp$Diagnostic, levels = c("CTL", "MCI", "AD"))
-
-dados_ADNI <- dados_datasetscomp %>%
-  filter(Sample == "ADNI", ROI == "hemisphere") %>%
-  dplyr::select(c(SUBJ, Age, Gender, Diagnostic, Sample, ROI, hemi, AvgThickness, TotalArea, ExposedArea, GMvolume, k, K, S, I, MMSE, ABETA, TAU, Age_interval10, Age_interval)) 
-
-# write.csv(dados_ADNI, "dados_ADNI.csv")
+```{r working directory}
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -74,6 +36,21 @@ test_coef <- function(reg, coefnum, val){
 wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
 ```
 
+```{r call packages}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(ggpubr)
+library(kableExtra)
+library(broom)
+library(MASS)
+library(cutpointr)
+library(ggstatsplot)
+library(effects)
+library(compute.es)
+library(readxl)
+```
+
 ```{r} 
 # COLOR BLIND PALETTE WITH BLACK
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -84,6 +61,113 @@ cbbPalette2 <- c("#D55E00", "#E69F00", "#56B4E9", "#0072B2", "#CC79A7", "#009E73
 
 ```{r}
 set.seed(1)
+```
+
+```{r import files}
+dados_raw <- read_csv("dados_v1.csv") %>%
+  mutate(ABETA = `AB1-42`,
+         Sample = "IDOR")
+
+dados_ADNI <- read_csv("dados_ADNI.csv", 
+    col_types = cols(...1 = col_skip())) %>%
+  mutate(Sample = "ADNI",
+         ROI = "hemisphere")
+
+dados_datasetscomp <- full_join(dados_raw, dados_ADNI) %>%
+  filter(ROI == "hemisphere") %>%
+  dplyr::select(c(SUBJ, Age, Gender, Diagnostic, hemi, ROI, AvgThickness, TotalArea, ExposedArea, TAU, ABETA, Age_interval, Age_interval10, Sample)) %>%
+  droplevels()
+
+dados_datasetscomp$Diagnostic <- factor(dados_datasetscomp$Diagnostic, levels = c("AD", "MCI","CTL"))
+
+```
+
+```{r}
+dados_datasetscomp <-  dados_datasetscomp %>%
+  mutate(
+    # create new variables
+    logAvgThickness = log10(AvgThickness),
+    logTotalArea = log10(TotalArea),
+    logExposedArea = log10(ExposedArea),
+    localGI = TotalArea / ExposedArea,
+    k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
+    K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+    I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
+    Knorm = K / sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2),
+    Snorm = S / sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2),
+    Inorm = I / sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1)
+  )
+```
+
+## Deaging
+
+```{r deaging}
+# define age for deaging
+Age.cor = 25
+
+## Avg thickness ----
+decay_AvgThickness <-
+  filter(
+    dados_datasetscomp,
+    Diagnostic == "CTL") %>%
+  droplevels() %>%
+  group_by(Sample) %>%
+  do(fit_decay_AvgThickness = tidy(rlm(AvgThickness ~ Age, data = .), conf.int = TRUE)) %>%
+  unnest(cols = c(fit_decay_AvgThickness)) %>%
+  filter(term == "Age") %>%
+  mutate(c_AvgThickness = estimate,
+         std_error_c_AvgThickness = std.error) %>%
+  dplyr::select(c(Sample, c_AvgThickness, std_error_c_AvgThickness))
+
+## TotalArea ----
+decay_TotalArea <-
+  filter(
+    dados_datasetscomp,
+    Diagnostic == "CTL") %>%
+  droplevels() %>%
+  group_by(Sample) %>%
+  do(fit_decay_TotalArea = tidy(rlm(TotalArea ~ Age, data = .), conf.int = TRUE)) %>%
+  unnest(cols = c(fit_decay_TotalArea)) %>%
+  filter(term == "Age") %>%
+  mutate(c_TotalArea = estimate,
+         std_error_c_TotalArea = std.error) %>%
+  dplyr::select(c(Sample, c_TotalArea, std_error_c_TotalArea))
+
+## ExposedArea ----
+decay_ExposedArea <-
+  filter(
+    dados_datasetscomp,
+    Diagnostic == "CTL") %>%
+  droplevels() %>%
+  group_by(Sample) %>%
+  do(fit_decay_ExposedArea = tidy(rlm(ExposedArea ~ Age, data = .), conf.int = TRUE)) %>%
+  unnest(cols = c(fit_decay_ExposedArea)) %>%
+  filter(term == "Age") %>%
+  mutate(c_ExposedArea = estimate,
+         std_error_c_ExposedArea = std.error) %>%
+  dplyr::select(c(Sample, c_ExposedArea, std_error_c_ExposedArea))
+
+## join
+dados_datasetscomp <- full_join(dados_datasetscomp, decay_AvgThickness) %>%
+  full_join(decay_TotalArea) %>%
+  full_join(decay_ExposedArea) %>%
+  mutate(
+    AvgThickness_age_decay = AvgThickness - c_AvgThickness * (Age - Age.cor),
+    logAvgThickness_age_decay = log10(AvgThickness_age_decay),
+    TotalArea_age_decay = TotalArea - c_TotalArea * (Age - Age.cor),
+    logTotalArea_age_decay = log10(TotalArea_age_decay),
+    ExposedArea_age_decay = ExposedArea - c_ExposedArea * (Age - Age.cor),
+    logExposedArea_age_decay = log10(ExposedArea_age_decay),
+    localGI_age_decay = TotalArea_age_decay / ExposedArea_age_decay,
+    K_age_decay = log10(TotalArea_age_decay) + 1/4*log10(AvgThickness_age_decay^2) - 5/4*log10(ExposedArea_age_decay),
+    I_age_decay = log10(TotalArea_age_decay) + log10(ExposedArea_age_decay) + log10(AvgThickness_age_decay^2),
+    S_age_decay = 3/2*log10(TotalArea_age_decay) + 3/4*log10(ExposedArea_age_decay) - 9/4*log10(AvgThickness_age_decay^2))
+
+dados_datasetscomp$logAvgThickness <- as.double(dados_datasetscomp$logAvgThickness)
+dados_datasetscomp$logExposedArea <- as.double(dados_datasetscomp$logExposedArea)
+dados_datasetscomp$logTotalArea   <- as.double(dados_datasetscomp$logTotalArea)
+
 ```
 
 # Data description
@@ -127,81 +211,67 @@ filter(dados_datasetscomp, ROI == "hemisphere") %>%
     ABETA = paste(signif(mean(ABETA, na.rm = TRUE), 2), "±", signif(sd(ABETA, na.rm = TRUE), 2))
   )
 ```
+
 ```{r}
-dados_v1 <- filter(dados_datasetscomp, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere") %>%
+dados_ADNI <- filter(dados_datasetscomp, ROI == "hemisphere", Sample == "ADNI") %>%
   droplevels()
-
-dados <- filter(dados_datasetscomp, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere", Sample == "ADNI") %>%
-  droplevels()
-
-# lobe data
-dados_lobos_v1 <- unique(filter(dados_datasetscomp, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  !is.na(K_age_decay), SUBJ != "SUBJ211", SUBJ != "SUBJ223")) %>%
-  droplevels()
-
-dados_lobos_v1_ADNI <- unique(filter(dados_datasetscomp, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  !is.na(K_age_decay), SUBJ != "SUBJ211", SUBJ != "SUBJ223", Sample == "ADNI")) %>%
-  droplevels()
-
-# hemisphere data
-dados_hemi_v1 <- unique(filter(dados_datasetscomp, ROI == "hemisphere", !is.na(K_age_decay)))
-
-dados_hemi_v1_ADNI <- unique(filter(dados_datasetscomp, ROI == "hemisphere", Sample == "ADNI", !is.na(K_age_decay)))
 ```
 
 ### Stats tests 
 
 #### Age
 ```{r}
-summary(aov(Age ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(Age ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(Age ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(Age ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### T
 
 ```{r}
-summary(aov(AvgThickness ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(AvgThickness ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(AvgThickness ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(AvgThickness ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### AT
 
 ```{r}
-summary(aov(TotalArea ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(TotalArea ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(TotalArea ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(TotalArea ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### AE
 
 ```{r}
-summary(aov(ExposedArea ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(ExposedArea ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(ExposedArea ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(ExposedArea ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### k
 
 ```{r}
-summary(aov(k ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(k ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(k ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(k ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### K
 
 ```{r}
-summary(aov(K ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(K ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(K ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(K ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### S
 
 ```{r}
-summary(aov(S ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(S ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(S ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(S ~ Diagnostic, data = dados_ADNI))
 ```
 
 #### I
 
 ```{r}
-summary(aov(I ~ Diagnostic, data = dados_hemi_v1_ADNI))
-TukeyHSD(aov(I ~ Diagnostic, data = dados_hemi_v1_ADNI))
+summary(aov(I ~ Diagnostic, data = dados_ADNI))
+TukeyHSD(aov(I ~ Diagnostic, data = dados_ADNI))
 ```
 
 ## Cortical Folding Model - ADNI
@@ -209,14 +279,14 @@ TukeyHSD(aov(I ~ Diagnostic, data = dados_hemi_v1_ADNI))
 ```{r}
 summary(lm(
   1 / 2 * log10(AvgThickness) + log10(TotalArea) ~ log10(ExposedArea),
-  data = dados_hemi_v1_ADNI,
+  data = dados_ADNI,
   na.action = na.omit
 ))
 
 # Displays confidence interval
 tidy(lm(
   1 / 2 * log10(AvgThickness) + log10(TotalArea) ~ log10(ExposedArea),
-  data = dados_hemi_v1_ADNI,
+  data = dados_ADNI,
   na.action = na.omit
 ), conf.int = TRUE)
 
@@ -225,13 +295,13 @@ paste(
   signif(abs(coef(summary(
     lm(
       1 / 2 * log10(AvgThickness) + log10(TotalArea) ~ log10(ExposedArea),
-      data = dados_hemi_v1_ADNI,
+      data = dados_ADNI,
       na.action = na.omit
     )
   ))[2, 1] - 1.25) / coef(summary(
     lm(
       1 / 2 * log10(AvgThickness) + log10(TotalArea) ~ log10(ExposedArea),
-      data = dados_hemi_v1_ADNI,
+      data = dados_ADNI,
       na.action = na.omit
     )
   ))[2, 2], 3) 
@@ -241,7 +311,7 @@ paste(
   signif(test_coef(
     lm(
       1 / 2 * log10(AvgThickness) + log10(TotalArea) ~ log10(ExposedArea),
-      data = dados_hemi_v1_ADNI,
+      data = dados_ADNI,
       na.action = na.omit
     ),
     2,
@@ -251,7 +321,7 @@ paste(
 ```
 
 ```{r}
-dados_hemi_v1_ADNI %>%
+dados_ADNI %>%
   group_by(Diagnostic) %>%
   do(fit_Age = tidy(
     lm(
@@ -263,7 +333,7 @@ dados_hemi_v1_ADNI %>%
   )) %>%
   unnest(cols = c(fit_Age))
 
-dados_hemi_v1_ADNI %>%
+dados_ADNI %>%
   group_by(Diagnostic) %>%
   do(fit_Age = glance(
     lm(
@@ -284,7 +354,7 @@ dados_hemi_v1_ADNI %>%
 ```{r}
 lm_Age <-
   filter(
-    dados_hemi_v1_ADNI,
+    dados_ADNI,
     Diagnostic == "CTL") %>%
   group_by(Age_interval) %>%
   do(fit_Age = tidy(
@@ -299,7 +369,7 @@ lm_Age <-
 
 N_subj <-
   filter(
-    dados_hemi_v1_ADNI,
+    dados_ADNI,
     Diagnostic == "CTL"
     ) %>%
   group_by(Age_interval) %>%
@@ -319,7 +389,7 @@ fig1_adni <- ggplot(data = filter(lm_Age, term == "log10(ExposedArea)", Age_inte
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 fig1_adni
-ggsave("fig1_adni.pdf", plot = fig1_adni, width = 9, height = 11.37, units = "cm", device = "pdf")
+ggsave("fig1_adni.png", plot = fig1_adni, width = 9, height = 11.37, units = "cm", device = "png")
 
 lm_Age <- lm_Age %>% mutate(Age_interval = as.double((str_sub(Age_interval,2,3))))
 
@@ -329,7 +399,7 @@ cor.test(filter(lm_Age, term == "log10(ExposedArea)", Age_interval != "[90,95)",
 ### K
 
 ```{r}
- ggplot(data = dados_hemi_v1_ADNI, aes(Age, K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+ ggplot(data = dados_ADNI, aes(Age, K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -338,9 +408,9 @@ cor.test(filter(lm_Age, term == "log10(ExposedArea)", Age_interval != "[90,95)",
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-cor.test(filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$K, filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$Age)
+cor.test(filter(dados_ADNI, Diagnostic == "CTL")$K, filter(dados_ADNI, Diagnostic == "CTL")$Age)
 
-dados_hemi_v1_ADNI %>%
+dados_ADNI %>%
   group_by(Diagnostic) %>%
   do(fit_Age = tidy(
     lm(
@@ -352,7 +422,7 @@ dados_hemi_v1_ADNI %>%
   )) %>%
   unnest(cols = c(fit_Age))
 
-dados_hemi_v1_ADNI %>%
+dados_ADNI %>%
   group_by(Diagnostic) %>%
   do(fit_Age = glance(
     lm(
@@ -371,7 +441,7 @@ dados_hemi_v1_ADNI %>%
 
 ```{r}
 
- ggplot(data = dados_hemi_v1_ADNI, aes(Age, S, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+ ggplot(data = dados_ADNI, aes(Age, S, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -380,13 +450,14 @@ dados_hemi_v1_ADNI %>%
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-cor.test(filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$S, filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$Age)
+cor.test(filter(dados_ADNI, Diagnostic == "CTL")$S, filter(dados_ADNI, Diagnostic == "CTL")$Age)
 ```
+
 ### I
 
 ```{r}
 
- ggplot(data = dados_hemi_v1_ADNI, aes(Age, I, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+ ggplot(data = dados_ADNI, aes(Age, I, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -395,12 +466,12 @@ cor.test(filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$S, filter(dados_hemi_v1
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-cor.test(filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$I, filter(dados_hemi_v1_ADNI, Diagnostic == "CTL")$Age)
+cor.test(filter(dados_ADNI, Diagnostic == "CTL")$I, filter(dados_ADNI, Diagnostic == "CTL")$Age)
 ```
 
 **FIGURE 1**
 ```{r}
-fig2a <- ggplot(dados_hemi_v1_ADNI,
+fig2a <- ggplot(dados_ADNI,
                 aes(
                   log10(ExposedArea),
                   log10(sqrt(AvgThickness) * TotalArea),
@@ -413,7 +484,7 @@ fig2a <- ggplot(dados_hemi_v1_ADNI,
   # geom_abline(slope = 1.25,
   #             intercept = coef(lm(
   #               log10(sqrt(AvgThickness) * TotalArea) ~ log10(ExposedArea),
-  #               data = dados_hemi_v1_ADNI,
+  #               data = dados_ADNI,
   #               na.action = na.omit
   #             ))[1],
   #             color = "black") +
@@ -427,7 +498,7 @@ fig2a <- ggplot(dados_hemi_v1_ADNI,
 ```
 
 ```{r}
-fig1b <- ggplot(data = dados_hemi_v1_ADNI, aes(Age, K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+fig1b <- ggplot(data = dados_ADNI, aes(Age, K, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -448,7 +519,7 @@ fig1_alt_2 <-
     legend = "bottom"
   )
 
-ggsave("fig1_alt_2_adni.pdf", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "pdf")
+ggsave("fig1_alt_2_adni.png", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "png")
 # ggsave("fig1_alt_2.png", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "png")
 ```
 
@@ -463,7 +534,7 @@ fig1_alt_2
 ### K difference
 
 ```{r}
-t.test(K ~ Diagnostic, data = dados_hemi_v1_ADNI)
+t.test(K ~ Diagnostic, data = dados_ADNI)
 ```
 
 ### K is reduced with age, as cortical thickness, total area and exposed area
@@ -471,7 +542,7 @@ t.test(K ~ Diagnostic, data = dados_hemi_v1_ADNI)
 K decrease with age is shown on Figure 1 B. Cortical Thickness, Total area and Exposed area:
 
 ```{r}
-T <- ggplot(data = dados_hemi_v1_ADNI, aes(Age, AvgThickness, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+T <- ggplot(data = dados_ADNI, aes(Age, AvgThickness, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -480,7 +551,7 @@ T <- ggplot(data = dados_hemi_v1_ADNI, aes(Age, AvgThickness, color = Diagnostic
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-AT <- ggplot(data = dados_hemi_v1_ADNI, aes(Age, TotalArea, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+AT <- ggplot(data = dados_ADNI, aes(Age, TotalArea, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -492,7 +563,7 @@ AT <- ggplot(data = dados_hemi_v1_ADNI, aes(Age, TotalArea, color = Diagnostic, 
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-AE <- ggplot(data = dados_hemi_v1_ADNI, aes(Age, ExposedArea, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+AE <- ggplot(data = dados_ADNI, aes(Age, ExposedArea, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
   theme_pubr() +
@@ -512,79 +583,42 @@ ggarrange(T, AT, AE, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 ### Optimal cut-offs
 #### K
+
 ```{r echo=FALSE}
 cpK <-
-    cutpointr(
-        filter(dados_hemi_v1_ADNI, Diagnostic == "AD" | Diagnostic == "CTL"),
-        K,
-        Diagnostic,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
+  cutpointr(
+    dados_ADNI,
+    K,
+    Diagnostic,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
 summary(cpK)
-plot(cpK)
-
-```
-
-##### Sex as subgroups
-
-```{r echo=FALSE}
-cpK_sex <-
-    cutpointr(
-        filter(dados_hemi_v1_ADNI, Diagnostic == "AD" | Diagnostic == "CTL"),
-        K,
-        Diagnostic,
-        Gender,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
-summary(cpK_sex)
 
 ```
 
 #### log Avg Thickness
-```{r}
-cpT <-
-    cutpointr(
-        filter(dados_hemi_v1_ADNI, Diagnostic == "AD" | Diagnostic == "CTL"),
-       logAvgThickness,
-        Diagnostic,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
-summary(cpT)
-
-```
-
-##### Sex as subgroups
 
 ```{r echo=FALSE}
-cpT_sex <-
-    cutpointr(
-        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
-       logAvgThickness,
-        Diagnostic,
-        Gender,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
-summary(cpT_sex)
+cpT <-
+  cutpointr(
+    dados_ADNI,
+    logAvgThickness,
+    Diagnostic,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
+summary(cpT)
 
 ```
 
@@ -593,9 +627,9 @@ lab1 = paste("AD: ACC=", signif(cpK$acc,2),"\nSENS=",signif(cpK$sensitivity,2),"
              # ,"\nMCI: ACC=", signif(cpK_MCI$acc,2),"\nSENS=",signif(cpK_MCI$sensitivity,2),"\nSPEC=",signif(cpK_MCI$specificity,2)
              )
 
-xrng1 <- range(dados_hemi_v1_ADNI$K)
+xrng1 <- range(dados_ADNI$K)
 
-cutpoint_a <- ggplot(dados_hemi_v1_ADNI, aes(x = K, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
+cutpoint_a <- ggplot(dados_ADNI, aes(x = K, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
     geom_density() +
     geom_vline(xintercept = cpK$optimal_cutpoint, linetype = "dashed") + 
     # geom_vline(xintercept = cpK_MCI$optimal_cutpoint, linetype = "dotted") + 
@@ -616,9 +650,9 @@ lab2 = paste("AD: ACC=", signif(cpT$acc,2),"\nSENS=",signif(cpT$sensitivity,2),"
              # ,"\nMCI: ACC=", signif(cpT_MCI$acc,2),"\nSENS=",signif(cpT_MCI$sensitivity,2),"\nSPEC=",signif(cpT_MCI$specificity,2)
              )
 
-xrng2 <- range(dados_hemi_v1_ADNI$logAvgThickness)
+xrng2 <- range(dados_ADNI$logAvgThickness)
 
-cutpoint_b <- ggplot(dados_hemi_v1_ADNI, aes(x = logAvgThickness, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
+cutpoint_b <- ggplot(dados_ADNI, aes(x = logAvgThickness, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
     geom_density() +
     geom_vline(xintercept = cpT$optimal_cutpoint, linetype = "dashed") + 
     # geom_vline(xintercept = cpT_MCI$optimal_cutpoint, linetype = "dotted") + 
@@ -642,73 +676,42 @@ fig_cutpoint
 ```
 
 #### GI
+
 ```{r}
 cpGI <-
-    cutpointr(
-        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
-       localGI,
-        Diagnostic,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
+  cutpointr(
+    filter(dados_ADNI, Diagnostic == "AD" | Diagnostic == "CTL"),
+    localGI,
+    Diagnostic,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
 summary(cpGI)
 
 ```
 
-##### Sex as subgroups
-
-```{r}
-cpGI_sex <-
-    cutpointr(
-        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
-       localGI,
-        Diagnostic,
-       Gender,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
-summary(cpGI_sex)
-
-cpGI_MCI_sex <-
-    cutpointr(
-        filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
-       localGI,
-        Diagnostic,
-       Gender,
-        pos_class = "MCI",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
-summary(cpGI_MCI_sex)
-```
-
-
 #### Deaged
+
 ##### K
 ```{r}
 cpK_deaged <-
-    cutpointr(
-        filter(dados_hemi_v1_ADNI, Diagnostic == "AD" | Diagnostic == "CTL"),
-        K_age_decay,
-        Diagnostic,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
+  cutpointr(
+    dados_ADNI,
+    K_age_decay,
+    Diagnostic,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
 summary(cpK_deaged)
 plot(cpK_deaged)
 
@@ -718,17 +721,18 @@ plot(cpK_deaged)
 
 ```{r}
 cpT_deaged <-
-    cutpointr(
-        filter(dados_hemi_v1_ADNI, Diagnostic == "AD" | Diagnostic == "CTL"),
-       logAvgThickness_age_decay,
-        Diagnostic,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
+  cutpointr(
+    dados_ADNI,
+    logAvgThickness_age_decay,
+    Diagnostic,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
 summary(cpT_deaged)
 
 ```
@@ -736,17 +740,18 @@ summary(cpT_deaged)
 ##### GI
 ```{r}
 cpGI_deaged <-
-    cutpointr(
-        filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
-        localGI_age_decay,
-        Diagnostic,
-        pos_class = "AD",
-        neg_class = "CTL",
-        method = maximize_boot_metric,
-        metric = sum_sens_spec,
-        na.rm = TRUE,
-        boot_runs = 1000,
-    use_midpoints = TRUE)
+  cutpointr(
+    dados_ADNI,
+    localGI_age_decay,
+    Diagnostic,
+    pos_class = "AD",
+    neg_class = "CTL",
+    method = maximize_boot_metric,
+    metric = sum_sens_spec,
+    na.rm = TRUE,
+    boot_runs = 1000,
+    use_midpoints = TRUE
+  )
 summary(cpGI_deaged)
 # plot(cpK)
 
@@ -757,7 +762,7 @@ lab3 = paste("AD: ACC=", signif(cpK_deaged$acc,2),"\nSENS=",signif(cpK_deaged$se
              # ,"\nMCI: ACC=", signif(cpK_MCI_deaged$acc,2),"\nSENS=",signif(cpK_MCI_deaged$sensitivity,2),"\nSPEC=",signif(cpK_MCI_deaged$specificity,2)
              )
 
-cutpoint_a_deaged <- ggplot(dados_hemi_v1_ADNI, aes(x = K_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
+cutpoint_a_deaged <- ggplot(dados_ADNI, aes(x = K_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
   geom_density() +
   geom_vline(data = cpK_deaged, aes(xintercept = optimal_cutpoint), linetype = "dashed") + 
     # geom_vline(data = cpK_MCI_deaged, aes(xintercept = optimal_cutpoint), linetype = "dotted") + 
@@ -779,7 +784,7 @@ lab4 = paste("AD: ACC=", signif(cpT_deaged$acc,2),"\nSENS=",signif(cpT_deaged$se
              # ,"\nMCI: ACC=", signif(cpT_MCI_deaged$acc,2),"\nSENS=",signif(cpT_MCI_deaged$sensitivity,2),"\nSPEC=",signif(cpT_MCI_deaged$specificity,2)
              )
 
-cutpoint_b_deaged <- ggplot(dados_hemi_v1_ADNI, aes(x = logAvgThickness_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
+cutpoint_b_deaged <- ggplot(dados_ADNI, aes(x = logAvgThickness_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4))+
   geom_density() +
   geom_vline(data = cpT_deaged, aes(xintercept = optimal_cutpoint), linetype = "dashed") + 
   # geom_vline(data = cpT_MCI_deaged, aes(xintercept = optimal_cutpoint), linetype = "dotted") + 
@@ -805,9 +810,9 @@ ggarrange(cutpoint_a_deaged, cutpoint_b_deaged, labels = c("A", "B"),  ncol = 1,
 ```{r}
 fig_cutpoint_deaged_alt <- ggarrange(cutpoint_a, cutpoint_b,  cutpoint_a_deaged, cutpoint_b_deaged, labels = c("A", "C",  "B", "D"),  ncol = 2, nrow = 2, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
 
-ggsave("fig_cutpoint_deaged_alt_adni.pdf", plot = fig_cutpoint_deaged_alt, width = 18, height = 12, units = "cm", device = "pdf")
+ggsave("fig_cutpoint_deaged_alt_adni.png", plot = fig_cutpoint_deaged_alt, width = 18, height = 12, units = "cm", device = "png")
 # ggsave("fig_cutpoint_deaged_alt.png", plot = fig_cutpoint_deaged_alt, width = 9, height = 22, units = "cm", device = "png")
-# ggsave("fig_cutpoint_deaged_alt.pdf", plot = fig_cutpoint_deaged_alt, dpi=1200, width = 9, height = 22, units = "cm", device = "pdf")
+# ggsave("fig_cutpoint_deaged_alt.png", plot = fig_cutpoint_deaged_alt, dpi=1200, width = 9, height = 22, units = "cm", device = "png")
 
 fig_cutpoint_deaged_alt
 ```
@@ -816,7 +821,7 @@ fig_cutpoint_deaged_alt
 
 Age groups:
 ```{r}
-dados_hemi_v1_ADNI_agegroups <- dados_hemi_v1_ADNI %>%
+dados_ADNI_agegroups <- dados_ADNI %>%
   mutate(Age.group = ifelse(
     Age > 75,
     "76-86",
@@ -825,7 +830,7 @@ dados_hemi_v1_ADNI_agegroups <- dados_hemi_v1_ADNI %>%
            "")))
 
 
-dados_hemi_v1_ADNI_agegroups %>%
+dados_ADNI_agegroups %>%
   group_by(Age.group, Diagnostic) %>%
   summarise(N = n_distinct(SUBJ))
 
@@ -833,21 +838,21 @@ dados_hemi_v1_ADNI_agegroups %>%
 
 #### K
 ```{r}
-summary(aov(K ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
-TukeyHSD(aov(K ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
+summary(aov(K ~ Diagnostic:Age.group, data = dados_ADNI_agegroups))
+TukeyHSD(aov(K ~ Diagnostic:Age.group, data = dados_ADNI_agegroups))
 
 ```
 
 #### S
 ```{r}
-summary(aov(S ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
-TukeyHSD(aov(S ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
+summary(aov(S ~ Diagnostic:Age.group, data = dados_ADNI_agegroups))
+TukeyHSD(aov(S ~ Diagnostic:Age.group, data = dados_ADNI_agegroups))
 ```
 
 #### I
 ```{r}
-summary(aov(I ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
-TukeyHSD(aov(I ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
+summary(aov(I ~ Diagnostic:Age.group, data = dados_ADNI_agegroups))
+TukeyHSD(aov(I ~ Diagnostic:Age.group, data = dados_ADNI_agegroups))
 
 ```
 
@@ -855,7 +860,7 @@ TukeyHSD(aov(I ~ Diagnostic:Age.group, data = dados_hemi_v1_ADNI_agegroups))
 
 ```{r}
 mean_K_I_S <-
-  dados_hemi_v1_ADNI %>% group_by(Diagnostic) %>% summarise(
+  dados_ADNI %>% group_by(Diagnostic) %>% summarise(
     mean.K = mean(Knorm, na.rm = TRUE),
     SD_K = sd(Knorm, na.rm = TRUE),
     mean.I = mean(Inorm, na.rm = TRUE),
@@ -888,7 +893,7 @@ fig3c <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
 
 ```{r}
 mean_K_I_S_agegroups <-
-  filter(dados_hemi_v1_ADNI_agegroups) %>% group_by(Diagnostic, Age.group) %>% summarise(
+  filter(dados_ADNI_agegroups) %>% group_by(Diagnostic, Age.group) %>% summarise(
     mean.T = mean(logAvgThickness, na.rm = TRUE),
     SD_T = sd(logAvgThickness, na.rm = TRUE),
     mean.K = mean(Knorm, na.rm = TRUE),
@@ -933,10 +938,10 @@ fig3s <- ggarrange(fig3b, fig3d, labels = c("A", "B"), nrow=2, font.label = list
 
 #fig3s <- ggarrange(fig3a, fig3b,fig3c, fig3d, labels = c("A", "B","C","D"), nrow=2, ncol=2, font.label = list(size = 11))
 
-# ggsave("fig3s.pdf",fig3s, width = 9, height = 17.1, units = "cm", device = "pdf")
+# ggsave("fig3s.png",fig3s, width = 9, height = 17.1, units = "cm", device = "png")
 # ggsave("fig3s.png",fig3s, width = 9, height = 17.1, units = "cm", device = "png")
 
-# ggsave("fig3s.pdf",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "pdf")
+# ggsave("fig3s.png",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "png")
 ```
 
 ```{r figure3, fig.cap="\\label{fig:figure3}Morphological trajectory traced across the normalized independent components K, S,and I. We normalized the variable to the unity vectors providing comparable scale for the differences in both axes. (A, C) CTL as Control (blue, N~=~77) and the reference, MCI as Mild Cognitive Impairment (green, N~=~33) and AD for Alzheimer’s Disease (red, N~=~17). (B, D) Groups were divide in two subgroups, subjects with age between 65 and 75 years (circle, CTL N~=~67, MCI N~=~24, AD N~=~4) old and subjects with ages between 76 and 85 years old (triangle, CTL N~=~10, MCI N~=~9, AD N~=~9).", fig.height=6.73, fig.width=3.54 }
@@ -947,7 +952,7 @@ fig3s
 
 Age groups:
 ```{r}
-dados_hemi_v1_agegroups <- dados_hemi_v1 %>%
+dados_agegroups <- dados_datasetscomp %>%
   mutate(Age.group = ifelse(
     Age > 75,
     "76-86",
@@ -961,7 +966,7 @@ dados_hemi_v1_agegroups <- dados_hemi_v1 %>%
 
 ```{r}
 mean_K_I_S <-
-  dados_hemi_v1 %>% group_by(Sample, Diagnostic) %>% summarise(
+  dados_datasetscomp %>% group_by(Sample, Diagnostic) %>% summarise(
     mean.K = mean(Knorm, na.rm = TRUE),
     SD_K = sd(Knorm, na.rm = TRUE),
     mean.I = mean(Inorm, na.rm = TRUE),
@@ -994,7 +999,7 @@ fig3c <- ggplot(mean_K_I_S, aes(x = mean.K, y = mean.I, color = Diagnostic)) +
 
 ```{r}
 mean_K_I_S_agegroups <-
-  filter(dados_hemi_v1_agegroups) %>% group_by(Sample, Diagnostic, Age.group) %>% summarise(
+  filter(dados_agegroups) %>% group_by(Sample, Diagnostic, Age.group) %>% summarise(
     mean.T = mean(logAvgThickness, na.rm = TRUE),
     SD_T = sd(logAvgThickness, na.rm = TRUE),
     mean.K = mean(Knorm, na.rm = TRUE),
@@ -1041,10 +1046,10 @@ fig3s <- ggarrange(fig3b, fig3d, labels = c("A", "B"), nrow=2, font.label = list
 
 #fig3s <- ggarrange(fig3a, fig3b,fig3c, fig3d, labels = c("A", "B","C","D"), nrow=2, ncol=2, font.label = list(size = 11))
 
-ggsave("fig3s_adni.pdf",fig3s, width = 9, height = 17.1, units = "cm", device = "pdf")
+ggsave("fig3s_adni.png",fig3s, width = 9, height = 17.1, units = "cm", device = "png")
 # ggsave("fig3s.png",fig3s, width = 9, height = 17.1, units = "cm", device = "png")
 
-# ggsave("fig3s.pdf",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "pdf")
+# ggsave("fig3s.png",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "png")
 ```
 
 ```{r figure3alternativa, fig.height=6.73, fig.width=3.54 }
@@ -1054,14 +1059,12 @@ fig3s
 ## with age intervals
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-dados_hemi_v1 %>%
+dados_datasetscomp %>%
   group_by(Diagnostic, Age_interval10) %>%
   summarise(
     N = n_distinct(SUBJ),
     age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
-    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
-    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2))
-  ) %>%
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2))) %>%
   kable(digits = 2) %>%
   kable_styling()
 ```
@@ -1069,7 +1072,7 @@ dados_hemi_v1 %>%
 
 ```{r}
 mean_K_I_S_agegroups <-
-  dados_hemi_v1 %>% group_by(Sample, Diagnostic, Age_interval10) %>% summarise(
+  dados_datasetscomp %>% group_by(Sample, Diagnostic, Age_interval10) %>% summarise(
     mean.T = mean(logAvgThickness, na.rm = TRUE),
     SD_T = sd(logAvgThickness, na.rm = TRUE),
     mean.K = mean(Knorm, na.rm = TRUE),
@@ -1089,7 +1092,7 @@ fig3b_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.S, color = Di
     geom_line(aes(group = Diagnostic)) +
   geom_errorbar(aes(ymin = mean.S - SD_S, ymax = mean.S + SD_S))  +
   geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
-  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Snorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
+  geom_point(data = dados_agegroups, aes(x = Knorm, y = Snorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
     #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
     theme_pubr() + 
   # guides(color = "none") + 
@@ -1110,7 +1113,7 @@ fig3d_Alt <- ggplot(mean_K_I_S_agegroups, aes(x = mean.K, y = mean.I, color = Di
     geom_line(aes(group = Diagnostic)) +
     geom_errorbar(aes(ymin = mean.I - SD_I, ymax = mean.I + SD_I))  +
   geom_errorbarh(aes(xmin = mean.K - SD_K, xmax = mean.K + SD_K))  +
-  geom_point(data = dados_hemi_v1_agegroups, aes(x = Knorm, y = Inorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
+  geom_point(data = dados_agegroups, aes(x = Knorm, y = Inorm, color = Diagnostic, shape = Age_interval10), alpha = 0.2) +
     #geom_text(aes(label=Age.group), nudge_y = 0.1, size =3)+
     theme_pubr() + 
   # guides(color = "none") + 
@@ -1129,34 +1132,34 @@ fig3s_Alt_allgroups <- ggarrange(fig3b_Alt, fig3d_Alt, labels = c("A", "B"),ncol
 
 fig3s_Alt_allgroups
 
-ggsave("fig3s_Alt_allgroups_adni.pdf", fig3s_Alt_allgroups, width = 18, height = 18, units = "cm", device = "pdf")
+ggsave("fig3s_Alt_allgroups_adni.png", fig3s_Alt_allgroups, width = 18, height = 18, units = "cm", device = "png")
 
 ```
 
 ```{r eval=FALSE, include=FALSE}
 
-ggplot(dados_hemi_v1_ADNI, aes(x = Diagnostic, y = S, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+ggplot(dados_ADNI, aes(x = Diagnostic, y = S, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-aov_diag_S <- aov(S ~ Diagnostic, data = dados_hemi_v1_ADNI)
+aov_diag_S <- aov(S ~ Diagnostic, data = dados_ADNI)
 summary(aov_diag_S)
 aov_diag_S_diag_TK <- TukeyHSD(aov_diag_S)
 #aov_diag_S_diag_TK
 
 aov_diag_S_diag_TK_t <- mutate(as.data.frame(aov_diag_S_diag_TK$Diagnostic), Contrast = c("MCI-AD", "CTL-AD", "CTL-MCI") , morphological_parameter = "S", Age_correction = "no", ROI = "hemisphere")
 
-ggplot(dados_hemi_v1_ADNI, aes(x = Diagnostic, y = S_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
+ggplot(dados_ADNI, aes(x = Diagnostic, y = S_age_decay, color = Diagnostic, fill = Diagnostic, alpha = 0.4)) +
   geom_boxplot() +
  stat_compare_means(method = "anova") +
   theme_pubr() +
   scale_fill_manual(values=cbbPalette2) +
   scale_colour_manual(values=cbbPalette2)
 
-aov_diag_S_age_decay <- aov(S_age_decay ~ Diagnostic, data = dados_hemi_v1_ADNI)
+aov_diag_S_age_decay <- aov(S_age_decay ~ Diagnostic, data = dados_ADNI)
 summary(aov_diag_S_age_decay)
 aov_diag_S_age_decay_diag_TK <- TukeyHSD(aov_diag_S_age_decay)
 #aov_diag_S_age_decay_diag_TK

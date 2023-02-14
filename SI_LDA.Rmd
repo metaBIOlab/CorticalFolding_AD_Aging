@@ -69,6 +69,7 @@ library(MASS)
 library(cutpointr)
 library(ggstatsplot)
 library(effects)
+library(readxl)
 
 ```
 
@@ -247,12 +248,44 @@ dados_raw$Age_interval10 <- cut(dados_raw$Age,
 
 ```{r data cleanup}
 dados_all <- dados_raw %>% filter(
-  !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea), !is.na(Age), AvgThickness != 0) %>%
+  Sample == "IDOR"
+    Diagnostic == "CONTROLE" |
+      Diagnostic == "CCL" |
+      Diagnostic == "ALZ", !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea)) %>% 
   droplevels()
 
 dados <- dados_all
+```
 
-dados <- filter(dados, Sample == "IDOR")
+```{r}
+# rename diagnostics
+dados$Diagnostic[dados$Diagnostic == "CONTROLE"] <- "CTL"
+dados$Diagnostic[dados$Diagnostic == "ALZ"] <- "AD"
+dados$Diagnostic[dados$Diagnostic == "CCL"] <- "MCI"
+dados$Diagnostic <- factor(dados$Diagnostic, levels = c("AD", "MCI","CTL"))
+
+# filter data
+dados <- dados %>%
+  filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
+                          ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
+                          Session == 1) %>% # use only data from Session 1
+  droplevels() # delete factor levels
+
+```
+
+
+Visual QC exclusion:
+```{r}
+VisualQC <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD.xlsx", 
+    sheet = "AD - IDOR ses 1 long", col_types = c("text", 
+        "text", "skip", "skip", "numeric", 
+        "skip", "skip", "skip", "skip", "text", 
+        "text")) %>%
+  dplyr::select(-c(session)) %>%
+  mutate(Session = 1)
+
+dados <- full_join(dados, VisualQC) %>%
+  filter(Classification == 1 | Classification == 2)
 ```
 
 ```{r}
