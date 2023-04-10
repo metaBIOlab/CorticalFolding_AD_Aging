@@ -1,0 +1,436 @@
+---
+title: "Manuscript 1 from Fernanda Hansen P. de Moraes Thesis - Cortical folding alterations in humans due to aging and diseases"
+author: "Fernanda Hansen Pacheco de Moraes"
+date: "1 dec 2021"
+output:
+  html_document: 
+    fig_caption: yes
+    fig_width: 8
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 6
+editor_options: 
+  chunk_output_type: inline
+---
+
+Description of the procedures and analysis present in Manuscript 1,
+**Independent morphological correlates to aging, Mild Cognitive
+Impairment, and Alzheimer's Disease**, at the Doctorate Thesis presented
+to the Programa de Pós-Graduação em Ciências Médicas at the Instituto
+D'Or de Pesquisa e Ensino as a partial requirement to obtain the
+Doctorate Degree.
+
+Part of the data used here cannot be shared due to restrictions of the
+Ethic Committee. Data can be shared upon reasonable request to the
+corresponding author. To fulfill these limitation, we will generate
+random data to simulate the results.
+
+Get in touch with us
+([fernandahmoraes\@gmail.com](mailto:fernandahmoraes@gmail.com){.email})
+in case any help is needed, our aim is to improve the code as needed!
+
+# RMARKDOWN AND R SETUP
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE
+)
+```
+
+```{r working directory}
+setwd("D:/GitHub/CorticalFolding_AD_Aging")
+```
+
+```{r functions, message=FALSE, warning=FALSE}
+## define functions
+
+# test angular coeficinet versus theoretical value
+test_coef <- function(reg, coefnum, val){
+  co <- coef(summary(reg))
+  tstat <- (co[coefnum,1] - val)/co[coefnum,2]
+  2 * pt(abs(tstat), reg$df.residual, lower.tail = FALSE)
+}
+
+# wrap text
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+```
+
+```{r call packages}
+library(readr)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(ggpubr)
+library(kableExtra)
+library(broom)
+library(MASS)
+library(cutpointr)
+library(ggstatsplot)
+library(effects)
+library(car)
+# library(multcomp)
+library(emmeans)
+library(compute.es)
+```
+
+```{r} 
+# COLOR BLIND PALETTE WITH BLACK
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette2 <- c("#D55E00", "#E69F00", "#56B4E9", "#0072B2", "#CC79A7", "#009E73", "#F0E442")
+```
+
+# set seed for random process
+
+```{r}
+set.seed(1)
+```
+
+```{r import files}
+dados_raw <- read_csv("dados_raw.csv")
+```
+
+# DATA PREPARATION
+
+```{r create new variables}
+# estimate cortical folding variables
+dados_raw <- dados_raw %>%
+  mutate(
+    # create new variables
+    logAvgThickness = log10(AvgThickness),
+    logTotalArea = log10(TotalArea),
+    logExposedArea = log10(ExposedArea),
+    localGI = TotalArea / ExposedArea,
+    k = sqrt(AvgThickness) * TotalArea / (ExposedArea ^ 1.25),
+    K = 1 / 4 * log10(AvgThickness ^ 2)  + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+    S = 3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^
+                                                                                 2) ,
+    I = log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2),
+    c = as.double(ifelse(
+      ROI == "hemisphere", NA, 4 * pi / GaussianCurvature
+    )),
+    TotalArea_corrected = ifelse(ROI == "hemisphere", TotalArea, TotalArea * c),
+    ExposedArea_corrected = ifelse(ROI == "hemisphere", ExposedArea, ExposedArea * c),
+    logTotalArea_corrected = log10(TotalArea_corrected),
+    logExposedArea_corrected = log10(ExposedArea_corrected),
+    localGI_corrected = ifelse(
+      ROI == "hemisphere",
+      TotalArea / ExposedArea,
+      TotalArea_corrected / ExposedArea_corrected
+    ),
+    k_corrected = ifelse(
+      ROI == "hemisphere",
+      sqrt(AvgThickness) * log10(TotalArea) / (log10(ExposedArea) ^ 1.25),
+      sqrt(AvgThickness) * log10(TotalArea_corrected) / (log10(ExposedArea_corrected ^
+                                                                 1.25))
+    ),
+    K_corrected =  ifelse(
+      ROI == "hemisphere",
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea) - 5 / 4 * log10(ExposedArea),
+      1 / 4 * log10(AvgThickness ^ 2) + log10(TotalArea_corrected) - 5 / 4 * log10(ExposedArea_corrected)
+    ),
+    I_corrected = ifelse(
+      ROI == "hemisphere",
+      log10(TotalArea) + log10(ExposedArea) + log10(AvgThickness ^ 2) ,
+      log10(TotalArea_corrected) + log10(ExposedArea_corrected) + log10(AvgThickness ^ 2)
+    ),
+    S_corrected = ifelse(
+      ROI == "hemisphere",
+      3 / 2 * log10(TotalArea) + 3 / 4 * log10(ExposedArea) - 9 /  4 * log10(AvgThickness ^ 2) ,
+      3 / 2 * log10(TotalArea_corrected) + 3 / 4 * log10(ExposedArea_corrected) - 9 /  4 * log10(AvgThickness ^ 2)
+    ),
+    Knorm = K_corrected / sqrt(1 + (1 / 4) ^ 2 + (5 / 4) ^ 2),
+    Snorm = S_corrected / sqrt((3 / 2) ^ 2 + (3 / 4) ^ 2 + (9 / 4) ^ 2),
+    Inorm = I_corrected / sqrt(1 ^ 2 + 1 ^ 2 + 1 ^ 1)
+  )
+
+# create age intervals
+dados_raw$Age_interval <- cut(dados_raw$Age,
+                                       breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100),
+                                       right = FALSE,
+                                       include.lowest = TRUE)
+
+dados_raw$Age_interval10 <- cut(dados_raw$Age,
+                                         breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+                                         right = FALSE,
+                                         include.lowest = TRUE)
+```
+
+```{r data cleanup}
+dados_all <- dados_raw %>% filter(
+    Diagnostic == "CONTROLE" |
+      Diagnostic == "CCL" |
+      Diagnostic == "ALZ", !is.na(logAvgThickness), ExposedArea != 0 | !is.na(localGI), !is.infinite(logExposedArea)) %>% 
+  droplevels()
+
+dados <- dados_all
+```
+
+```{r}
+# rename diagnostics
+dados$Diagnostic[dados$Diagnostic == "CONTROLE"] <- "CTL"
+dados$Diagnostic[dados$Diagnostic == "ALZ"] <- "AD"
+dados$Diagnostic[dados$Diagnostic == "CCL"] <- "MCI"
+dados$Diagnostic <- factor(dados$Diagnostic, levels = c("AD", "MCI","CTL"))
+
+# filter data
+dados <- dados %>%
+  filter(machine == "Philips-Achieva", # include only subjects acquired at Philips Achieva 3T
+                          ESC == 8 | ESC > 8, # include only subjects with 8 years of scholarship or more
+                          Session == 1) %>% # use only data from Session 1
+  droplevels() # delete factor levels
+```
+
+Visual QC exclusion:
+```{r}
+VisualQC <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD.xlsx", 
+    sheet = "AD - IDOR ses 1 long", col_types = c("text", 
+        "text", "skip", "skip", "numeric", 
+        "skip", "skip", "skip", "skip", "text", 
+        "text")) %>%
+  dplyr::select(-c(session)) %>%
+  mutate(Session = 1)
+
+dados <- full_join(dados, VisualQC) %>%
+  filter(Classification == 1 | Classification == 2)
+```
+
+# Deaging
+
+```{r deaging}
+# define age for deaging
+Age.cor = 25
+
+## Avg thickness ----
+decay_AvgThickness <-
+  filter(
+    dados,
+    Diagnostic == "CTL",!is.na(TotalArea),!is.nan(TotalArea),!is.infinite(TotalArea)
+  ) %>%
+  droplevels() %>%
+  group_by(ROI) %>%
+  do(fit_decay_AvgThickness = tidy(rlm(AvgThickness ~ Age, data = .), conf.int =
+                                     TRUE)) %>%
+  unnest(cols = c(fit_decay_AvgThickness)) %>%
+  filter(term == "Age") %>%
+  mutate(c_AvgThickness = estimate,
+         std_error_c_AvgThickness = std.error) %>%
+  dplyr::select(c(ROI, c_AvgThickness, std_error_c_AvgThickness))
+
+## TotalArea ----
+decay_TotalArea <-
+  filter(
+    dados,
+    Diagnostic == "CTL",
+    !is.na(TotalArea),
+    !is.nan(TotalArea),
+    !is.infinite(TotalArea)
+  ) %>%
+  droplevels() %>%
+  group_by(ROI) %>%
+  do(fit_decay_TotalArea = tidy(rlm(TotalArea ~ Age, data = .), conf.int =
+                                  TRUE)) %>%
+  unnest(cols = c(fit_decay_TotalArea)) %>%
+  filter(term == "Age") %>%
+  mutate(c_TotalArea = estimate,
+         std_error_c_TotalArea = std.error) %>%
+  dplyr::select(c(ROI, c_TotalArea, std_error_c_TotalArea))
+
+## ExposedArea ----
+decay_ExposedArea <-
+  filter(
+    dados,
+    Diagnostic == "CTL",
+    !is.na(ExposedArea),
+    !is.nan(ExposedArea),
+    !is.infinite(ExposedArea)
+  ) %>%
+  droplevels() %>%
+  group_by(ROI) %>%
+  do(fit_decay_ExposedArea = tidy(rlm(ExposedArea ~ Age, data = .), conf.int = TRUE)) %>%
+  unnest(cols = c(fit_decay_ExposedArea)) %>%
+  filter(term == "Age") %>%
+  mutate(c_ExposedArea = estimate,
+         std_error_c_ExposedArea = std.error) %>%
+  dplyr::select(c(ROI, c_ExposedArea, std_error_c_ExposedArea))
+
+## join
+dados <- full_join(dados, decay_AvgThickness) %>%
+  full_join(decay_TotalArea) %>%
+  full_join(decay_ExposedArea) %>%
+  mutate(
+    AvgThickness_age_decay = AvgThickness - c_AvgThickness * (Age - Age.cor),
+    logAvgThickness_age_decay = log10(AvgThickness_age_decay),
+    TotalArea_age_decay = TotalArea - c_TotalArea * (Age - Age.cor),
+    logTotalArea_age_decay = log10(TotalArea_age_decay),
+    ExposedArea_age_decay = ExposedArea - c_ExposedArea * (Age - Age.cor),
+    logExposedArea_age_decay = log10(ExposedArea_age_decay),
+    localGI_age_decay = TotalArea_age_decay / ExposedArea_age_decay,
+    K_age_decay = log10(TotalArea_age_decay) + 1/4*log10(AvgThickness_age_decay^2) - 5/4*log10(ExposedArea_age_decay),
+    I_age_decay = log10(TotalArea_age_decay) + log10(ExposedArea_age_decay) + log10(AvgThickness_age_decay^2),
+    S_age_decay = 3/2*log10(TotalArea_age_decay) + 3/4*log10(ExposedArea_age_decay) - 9/4*log10(AvgThickness_age_decay^2))
+
+dados$logAvgThickness <- as.double(dados$logAvgThickness)
+dados$logExposedArea <- as.double(dados$logExposedArea)
+dados$logTotalArea   <- as.double(dados$logTotalArea)
+
+```
+
+```{r}
+dados_v1 <- filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P" | ROI == "hemisphere") %>%
+  droplevels()
+
+# lobe data
+dados_lobos_v1 <- unique(filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | ROI == "P",  !is.na(K_age_decay), SUBJ != "SUBJ211", SUBJ != "SUBJ223")) %>%
+  droplevels()
+
+# hemisphere data
+dados_hemi_v1 <- unique(filter(dados, ROI == "hemisphere", !is.na(K_age_decay)))
+```
+
+```{r include=FALSE}
+write.csv(dados_v1, "dados_v1.csv")
+```
+
+# RESULTS
+
+## Data description
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    age = paste(signif(mean(Age), 2), "±", signif(sd(Age), 2)),
+    age_range = paste(signif(min(Age), 2), "; ", signif(max(Age), 2)),
+    ESC = paste(signif(mean(ESC), 2), "±", signif(sd(ESC), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic, Gender) %>%
+  summarise(
+    N = n_distinct(SUBJ)
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+     N = n_distinct(SUBJ),
+    AvgThickness = paste(signif(mean(AvgThickness), 2), "±", signif(sd(AvgThickness), 2)),
+    TotalArea = paste(signif(mean(TotalArea), 2), "±", signif(sd(TotalArea), 2)),
+    ExposedArea = paste(signif(mean(ExposedArea), 2), "±", signif(sd(ExposedArea), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    k = paste(signif(mean(k), 2), "±", signif(sd(k), 2)),
+    K = paste(signif(mean(K), 2), "±", signif(sd(K), 2)),
+    S = paste(signif(mean(S), 2), "±", signif(sd(S), 2)),
+    I = paste(signif(mean(I), 2), "±", signif(sd(I), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  filter(!is.na(COGNITIVE_INDEX)) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    COGNITIVE_INDEX = paste(signif(mean(COGNITIVE_INDEX), 2), "±", signif(sd(COGNITIVE_INDEX), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  summarise(
+     N = n_distinct(SUBJ),
+    `A7/A5` = paste(signif(mean(`A7/A5`), 2), "±", signif(sd(`A7/A5`), 2)),
+    `TMT B-A` = paste(signif(mean(`TMT B-A`), 2), "±", signif(sd(`TMT B-A`), 2)),
+    `DIGIT SPAN BACK` = paste(signif(mean(`DIGIT SPAN BACK`), 2), "±", signif(sd(`DIGIT SPAN BACK`), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  filter(!is.na(Lipoxina)) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    Lipoxin = paste(signif(mean(Lipoxina), 2), "±", signif(sd(Lipoxina), 2))
+  )
+
+dados_hemi_v1 %>%
+  group_by(Diagnostic) %>%
+  filter(!is.na(`AB1-40`), !is.na(`AB1-42`), !is.na(TAU)) %>%
+  summarise(
+    N = n_distinct(SUBJ),
+    `AB1-40` = paste(signif(mean(`AB1-40`), 2), "±", signif(sd(`AB1-40`), 2)),
+    `AB1-42` = paste(signif(mean(`AB1-42`), 2), "±", signif(sd(`AB1-42`), 2)),
+    TAU = paste(signif(mean(TAU), 2), "±", signif(sd(TAU), 2))
+  )
+```
+
+## Behavioral and CSF data correlation
+
+```{r}
+a <- ggplot(dados_hemi_v1,
+       aes(y = K,
+           x = COGNITIVE_INDEX,
+           alpha = 0.4)) +
+  geom_point(aes(color = Diagnostic,
+                 fill = Diagnostic)) +
+  geom_smooth(method = "lm", se = TRUE, color = "#666666") +
+  labs(x = "COGNITIVE INDEX",
+       y = "K") +
+  guides(alpha = "none") +
+  theme_pubr() +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2)
+
+a
+
+b <- ggplot(dados_hemi_v1,
+       aes(y = K,
+           x = `AB1-42`,
+           alpha = 0.4)) +
+  geom_point(aes(color = Diagnostic,
+                 fill = Diagnostic)) +
+  geom_smooth(method = "lm", se = TRUE, color = "#666666") +
+  labs(x = "ABETA1-42",
+       y = "K") +
+  guides(alpha = "none") +
+  theme_pubr() +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2)
+
+b
+
+c <- ggplot(dados_hemi_v1,
+       aes(y = K,
+           x = TAU,
+           alpha = 0.4)) +
+  geom_point(aes(color = Diagnostic,
+                 fill = Diagnostic)) +
+  geom_smooth(method = "lm", se = TRUE, color = "#666666") +
+  labs(x = "t-TAU",
+       y = "K") +
+  guides(alpha = "none") +
+  theme_pubr() +
+  scale_fill_manual(values = cbbPalette2) +
+  scale_colour_manual(values = cbbPalette2) +
+  scale_x_continuous(limits=c(200,1200), breaks = c(300, 600, 900, 1200)) 
+c
+```
+
+```{r}
+fig <-
+  ggarrange(
+    a, b, c,
+    labels = c("A", "B", "C"),
+    ncol = 1,
+    common.legend = TRUE,
+    legend = "bottom"
+  )
+
+ggsave("fig_clinical_graphicalabstract.png", plot = fig, width = 8, height = 16, units = "cm", device = "png")
+```
+
