@@ -87,6 +87,7 @@ set.seed(1)
 dados_raw <- read_csv("dados_raw.csv")
 ```
 # DATA PREPARATION
+
 ```{r create new variables}
 # estimate cortical folding variables
 dados_raw <- dados_raw %>%
