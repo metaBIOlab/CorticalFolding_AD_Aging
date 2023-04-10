@@ -135,6 +135,85 @@ ggplot(subjects, aes(x = Diagnostic, y = meanEulerNumber, color = Diagnostic)) +
   theme_pubr()
 ```
 
+# Euler number before surface corretion
+
+```{r}
+eulernumber_befrsurfacecorrection <-
+  read_csv("eulernumber_ad6.csv") %>%
+  mutate(
+    SUBJ = str_split(fullpath, pattern = "/", simplify = TRUE)[, 8],
+    Session = as.double(str_split(SUBJ, pattern = "_ses-", simplify = TRUE)[, 2]),
+    SUBJ = str_split(SUBJ, pattern = "_ses-", simplify = TRUE)[, 1]) %>%
+  filter(!is.nan(lhEuler),
+         SUBJ != str_detect(SUBJ, pattern = "_tmpl")) %>%
+  dplyr::select(-c(fullpath))
+
+eulernumber_befrsurfacecorrection <- eulernumber_befrsurfacecorrection %>%
+  mutate(
+    meanEulernumber_befrsurfacecorrection = (lhEuler+rhEuler)/2
+  )
+
+# eulernumber_renumbered_lh <- eulernumber_renumbered %>%
+#   dplyr::select(SUBJ, lhEuler, meanEulernumber_befrsurfacecorrection) %>%
+#   mutate(hemi = "left")
+# colnames(eulernumber_renumbered_lh)[2] <- "Eulernumber"
+# eulernumber_renumbered_rh <- eulernumber_renumbered %>%
+#   dplyr::select(SUBJ, rhEuler, meanEulernumber_befrsurfacecorrection) %>%
+#   mutate(hemi = "right")
+# colnames(eulernumber_renumbered_rh)[2] <- "Eulernumber"
+# eulernumber_befrsurfacecorrection <- rbind(eulernumber_renumbered_lh, eulernumber_renumbered_rh)
+
+subjects_euler <- full_join(subjects, eulernumber_befrsurfacecorrection) %>%
+  filter(!is.na(Diagnostic), Session == 1)
+```
+
+```{r}
+ggplot(subjects_euler, aes(x = Diagnostic, y = meanEulernumber_befrsurfacecorrection)) +
+  geom_boxplot(outlier.color = "red") +
+  theme_pubr()
+
+subjects_euler %>%
+  summarise(
+    mean = mean(meanEulernumber_befrsurfacecorrection),
+    sd = sd(meanEulernumber_befrsurfacecorrection)
+  )
+
+subjects_euler %>%
+  group_by(Diagnostic) %>%
+  summarise(
+    mean = mean(meanEulernumber_befrsurfacecorrection),
+    sd = sd(meanEulernumber_befrsurfacecorrection)
+  )
+
+summary(aov(meanEulernumber_befrsurfacecorrection ~ Diagnostic, data = subjects_euler))
+TukeyHSD(aov(meanEulernumber_befrsurfacecorrection ~ Diagnostic, data = subjects_euler))
+
+subjects_euler %>%
+  filter(meanEulernumber_befrsurfacecorrection < -100) %>%
+  dplyr::select(SUBJ, Age, Diagnostic, meanEulernumber_befrsurfacecorrection) %>%
+  unique()
+```
+
+Centering
+
+```{r}
+mean <- subjects_euler %>%
+  filter(Diagnostic == "CTL") %>%
+  summarise(
+    mean = mean(meanEulernumber_befrsurfacecorrection),
+    sd = sd(meanEulernumber_befrsurfacecorrection)
+  )
+
+subjects_euler <- cbind(subjects_euler, mean) %>%
+  mutate(z_euler = (meanEulernumber_befrsurfacecorrection- mean)/sd,
+         rutherford_euler = sqrt(z_euler*(-1)))
+
+ggplot(subjects_euler, aes(x = Diagnostic, y = rutherford_euler)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 10) +
+  theme_pubr()
+```
+
 # Visual quality Control
 
 ```{r}
@@ -145,6 +224,11 @@ VisualQC <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD.xlsx",
         "text"))
 
 subjects <- full_join(subjects, VisualQC)
+
+subjects %>%
+  filter(Session == 1, Classification < 1 ) %>%
+  dplyr::select(SUBJ, Age, Diagnostic, Classification) %>%
+  unique()
 ```
 
 # inclusion/exclusion criteria
@@ -179,9 +263,9 @@ write.csv(dataset1, "dataset1.csv")
 ```
 
 ```{r}
-subj_names <- dataset1 %>% dplyr::select(c(SUBJ)) 
-subj_names <- lapply(subj_names,sort)
-subj_names
+# subj_names <- dataset1 %>% dplyr::select(c(SUBJ)) 
+# subj_names <- lapply(subj_names,sort)
+# subj_names
 ```
 
 ## Quality control issues
