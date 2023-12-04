@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("D:/GitHub/CorticalFolding_AD_Aging")
+setwd("~/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r call packages}
@@ -55,7 +55,6 @@ subjects <- read_csv(
     Session = col_skip(),
     Gender = col_skip(),
     birthday = col_skip(),
-    acq_date = col_skip(),
     Birthdate = col_skip(),
     NeuroQuant = col_skip(),
     Lipoxina = col_skip()
@@ -217,19 +216,71 @@ ggplot(subjects_euler, aes(x = Diagnostic, y = rutherford_euler)) +
 # Visual quality Control
 
 ```{r}
-VisualQC <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD.xlsx", 
+VisualQC_ses_1  <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD 2.xlsx",
     sheet = "AD - IDOR ses 1 long", col_types = c("text", 
-        "text", "skip", "skip", "numeric", 
-        "skip", "skip", "skip", "skip", "text", 
-        "text"))
+        "text", "text", "skip", "numeric", 
+        "skip", "skip", "skip", "skip", "skip", 
+        "skip", "skip")) %>%
+  mutate(Session = as.double(str_sub(Session,5,5)),
+          Classification = Fernanda) %>%
+  dplyr::select(-c(Fernanda))
 
+VisualQC_ses_2 <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD 2.xlsx", sheet = "AD - IDOR ses 2 long", col_types = c("text", 
+        "text", "skip", "numeric", "skip", 
+        "skip", "skip", "skip", "skip")) %>%
+   mutate(SUBJ = str_sub(SUBJ,5,11),
+          Session = as.double(str_sub(Session,5,5)),
+          Classification = Fernanda,
+          `Longitudinal correction` = "long") %>%
+  dplyr::select(-c(Fernanda))
+
+VisualQC_ses_3 <- read_excel("Verificacao qualidade segmentacao FS Zika e CCD 2.xlsx", sheet = "AD - IDOR ses 3 long", col_types = c("text", 
+        "text", "skip", "numeric", "skip", 
+        "skip", "skip", "skip", "skip")) %>%
+   mutate(SUBJ = str_sub(SUBJ,1,8),
+          Session = as.double(str_sub(Session,5,5)),
+          Classification = Fernanda,
+          `Longitudinal correction` = "long") %>%
+  dplyr::select(-c(Fernanda))
+
+
+VisualQC <- full_join(VisualQC_ses_1, VisualQC_ses_2)
+# %>%
+#   full_join(VisualQC_ses_3)
+         
 subjects <- full_join(subjects, VisualQC)
+
+```
+
+## Prioridades Ananssa
+
+```{r}
+prioridades_simoa <- read_excel("C:/Users/ferna/Downloads/Amostras usadas SIMOA_Prioridades para neuroimagem_2.xlsx", 
+    col_types = c("skip", "text", "text", 
+        "date", "numeric", "skip", "skip")) %>%
+  mutate(acq_date = Acquisition_Date) %>%
+  select(-c(Acquisition_Date, Diag.))
+```
+
+
+```{r}
+
+infos <- full_join(subjects, prioridades_simoa) %>%
+  select(c(SUBJ, Session, acq_date, AvgThickness, Classification, Prioridade))
+write.csv(infos, "prioridades_simoa.csv")
+
+```
+
+
+```{r}
+write.csv(subjects, "subjects.csv")
 
 subjects %>%
   filter(Session == 1, Classification < 1 ) %>%
   dplyr::select(SUBJ, Age, Diagnostic, Classification) %>%
   unique()
 ```
+
 
 # inclusion/exclusion criteria
 
