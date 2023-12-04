@@ -639,6 +639,18 @@ res$l.d
 res$u.d
 ```
 
+### data sharing - **FIGURE 1**
+
+```{r}
+
+datafig1 <- dados_hemi_v1 %>%
+  dplyr::select(c(Age, Diagnostic, AvgThickness, TotalArea, ExposedArea, K)) %>%
+  mutate(x = log10(ExposedArea),
+         y = log10(sqrt(AvgThickness) * TotalArea)) %>%
+  dplyr::select(c(Age, Diagnostic, x, y, K))
+write.csv(datafig1, "datafig1.csv")
+```
+
 **FIGURE 1**
 ```{r}
 fig2a <- ggplot(dados_hemi_v1,
@@ -684,12 +696,15 @@ fig1_alt_2 <-
     fig2a,
     fig1b,
     labels = c("A", "B"),
-    ncol = 1,
+    ncol = 2,
+    nrow = 1,
     common.legend = TRUE,
     legend = "bottom"
   )
 
-ggsave("Figure1.png", plot = fig1_alt_2, width = 9, height = 11.37, units = "cm", device = "png")
+ggsave("Figure1.png", plot = fig1_alt_2, width = 18, height = 9, units = "cm", device = "png")
+ggsave("Figure1.pdf", plot = fig1_alt_2, width = 18, height = 9, units = "cm", device = "pdf")
+
 #ggsave("fig1_alt_2.pdf", plot = fig1_alt_2, dpi=1200, width = 9, height = 11.37, units = "cm", device = "pdf")
 ```
 
@@ -905,8 +920,7 @@ ggplot(e, aes(
 ### Optimal cut-offs
 #### K
 ```{r echo=FALSE}
-cpK <-
-    cutpointr(
+cpK <- cutpointr(
         filter(dados_hemi_v1, Diagnostic == "AD" | Diagnostic == "CTL"),
         K,
         Diagnostic,
@@ -918,6 +932,8 @@ cpK <-
         boot_runs = 1000,
     use_midpoints = TRUE)
 summary(cpK)
+
+write.csv(cpK$data, "datafig2a_AD.csv")
 
 cpK_MCI <-
     cutpointr(
@@ -933,11 +949,17 @@ cpK_MCI <-
     use_midpoints = TRUE)
 summary(cpK_MCI)
 
+write.csv(cpK_MCI$data, "datafig2a_MCI.csv")
+
 ```
 
 ```{r}
 roc_K_AD <- cpK$roc_curve[[1]]
 roc_K_MCI <- cpK_MCI$roc_curve[[1]]
+
+write.csv(cpK$roc_curve[[1]], "datafig2a_rocAD.csv")
+write.csv(cpK_MCI$roc_curve[[1]], "datafig2a_rocMCI.csv")
+
 ```
 
 #### log Avg Thickness
@@ -956,6 +978,8 @@ cpT <-
     use_midpoints = TRUE)
 summary(cpT)
 
+write.csv(cpT$data, "datafig2c_AD.csv")
+
 cpT_MCI <-
     cutpointr(
         filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
@@ -970,12 +994,16 @@ cpT_MCI <-
     use_midpoints = TRUE)
 summary(cpT_MCI)
 
+write.csv(cpT_MCI$data, "datafig2c_MCI.csv")
+
 ```
 
 ```{r}
 roc_T_AD <- cpT$roc_curve[[1]]
 roc_T_MCI <- cpT_MCI$roc_curve[[1]]
 
+write.csv(cpT$roc_curve[[1]], "datafig2a_rocAD_T.csv")
+write.csv(cpT_MCI$roc_curve[[1]], "datafig2a_rocMCI_T.csv")
 ```
 
 ```{r}
@@ -993,10 +1021,11 @@ cutpoint_a <- ggplot(dados_hemi_v1, aes(x = K, color = Diagnostic, fill = Diagno
     theme(axis.title = element_text(size = 11),
           axis.text = element_text(size = 10), text = element_text(size = 10)) +
     scale_x_continuous(
-        labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.48), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
+        labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.46), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
     scale_fill_manual(values=cbbPalette2) +
-    scale_colour_manual(values=cbbPalette2) +
-    annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95,label = lab1, size = 2)
+    scale_colour_manual(values=cbbPalette2)
+# +
+#     annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95,label = lab1, size = 2)
 
 lab2 = paste("AD: ACC=", signif(cpT$acc,2),"\nSENS=",signif(cpT$sensitivity,2),"\nSPEC=",signif(cpT$specificity,2),"\nMCI: ACC=", signif(cpT_MCI$acc,2),"\nSENS=",signif(cpT_MCI$sensitivity,2),"\nSPEC=",signif(cpT_MCI$specificity,2))
 
@@ -1013,8 +1042,9 @@ cutpoint_b <- ggplot(dados_hemi_v1, aes(x = logAvgThickness, color = Diagnostic,
     labs(x = expression('log'[10]*'T'), y = "Density") +
  scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
     scale_fill_manual(values=cbbPalette2) +
-    scale_colour_manual(values=cbbPalette2) +
-    annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab2, size = 2)
+    scale_colour_manual(values=cbbPalette2)
+# +
+#     annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab2, size = 2)
 # cutpoint_b
 
 fig_cutpoint <- ggarrange(cutpoint_a, cutpoint_b, labels = c("A", "B"),  ncol = 1, font.label = list(size = 11), common.legend = TRUE, legend = "top")
@@ -1070,6 +1100,9 @@ cpK_deaged <-
 summary(cpK_deaged)
 # plot(cpK)
 
+write.csv(cpK_deaged$data, "datafig2b_AD.csv")
+
+
 cpK_MCI_deaged <-
     cutpointr(
         filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
@@ -1084,6 +1117,9 @@ cpK_MCI_deaged <-
     use_midpoints = TRUE)
 summary(cpK_MCI_deaged)
 # plot(cpK_MCI)
+
+
+write.csv(cpK_MCI_deaged$data, "datafig2b_MCI.csv")
 
 ```
 
@@ -1104,6 +1140,8 @@ cpT_deaged <-
     use_midpoints = TRUE)
 summary(cpT_deaged)
 
+write.csv(cpT_deaged$data, "datafig2d_AD.csv")
+
 cpT_MCI_deaged <-
     cutpointr(
         filter(dados_hemi_v1, Diagnostic == "MCI" | Diagnostic == "CTL"),
@@ -1118,6 +1156,7 @@ cpT_MCI_deaged <-
     use_midpoints = TRUE)
 summary(cpT_MCI_deaged)
 
+write.csv(cpT_MCI_deaged$data, "datafig2d_MCI.csv")
 ```
 
 ##### GI
@@ -1167,10 +1206,11 @@ cutpoint_a_deaged <- ggplot(dados_hemi_v1, aes(x = K_age_decay, color = Diagnost
     axis.text = element_text(size = 10), text = element_text(size = 10)) +
   labs(x = "K (After age correction)", y = "Density") +
   scale_x_continuous(
-              labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.48), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
+              labels = scales::number_format(accuracy = 0.01), limits=c(-0.59,-0.46), breaks = c(-0.58, -0.55, -0.52, -0.49)) +
   scale_fill_manual(values=cbbPalette2) +
-  scale_colour_manual(values=cbbPalette2) +
-    annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab3, size = 2)
+  scale_colour_manual(values=cbbPalette2)
+# +
+#     annotate("text", x = xrng1[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab3, size = 2)
 # cutpoint_a_deaged
 
 lab4 = paste("AD: ACC=", signif(cpT_deaged$acc,2),"\nSENS=",signif(cpT_deaged$sensitivity,2),"\nSPEC=",signif(cpT_deaged$specificity,2),"\nMCI: ACC=", signif(cpT_MCI_deaged$acc,2),"\nSENS=",signif(cpT_MCI_deaged$sensitivity,2),"\nSPEC=",signif(cpT_MCI_deaged$specificity,2))
@@ -1186,18 +1226,33 @@ cutpoint_b_deaged <- ggplot(dados_hemi_v1, aes(x = logAvgThickness_age_decay, co
   labs(x = expression('log'[10]*'T '*('After age correction')), y = "Density") +
   scale_x_continuous(limits=c(0.32,0.48), n.breaks = 4) +
   scale_fill_manual(values=cbbPalette2) +
-  scale_colour_manual(values=cbbPalette2) +
-annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab4, size = 2)
+  scale_colour_manual(values=cbbPalette2)
+# +
+# annotate("text", x = xrng2[1], y = Inf, vjust = 1.1, hjust = 0.95, label = lab4, size = 2)
 
+```
+
+### data sharing - **FIGURE 2**
+
+```{r}
+
+datafig2 <- dados_hemi_v1 %>%
+  dplyr::select(c(Age, Diagnostic, AvgThickness, TotalArea, ExposedArea, K)) %>%
+  mutate(x = log10(ExposedArea),
+         y = log10(sqrt(AvgThickness) * TotalArea)) %>%
+  dplyr::select(c(Age, Diagnostic, x, y, K))
+write.csv(datafig1, "datafig1.csv")
 ```
 
 **FIGURE 2**
 
 ```{r}
-fig_cutpoint_deaged_alt <- ggarrange(cutpoint_a, cutpoint_a_deaged, cutpoint_b, cutpoint_b_deaged, labels = c("A", "B", "C", "D"),  ncol = 1, nrow = 4, font.label = list(size = 11), common.legend = TRUE, legend = "bottom") + 
+fig_cutpoint_deaged_alt <- ggarrange(cutpoint_a, cutpoint_b, cutpoint_a_deaged,  cutpoint_b_deaged, labels = c("A", "B", "C", "D"),  ncol = 2, nrow = 2, font.label = list(size = 11), common.legend = TRUE, legend = "bottom") + 
   theme(plot.background = element_rect(fill="white", color = NA))
 
-ggsave("Figure2.png", plot = fig_cutpoint_deaged_alt, width = 9, height = 22, units = "cm", device = "png")
+ggsave("Figure2_nocomments.png", plot = fig_cutpoint_deaged_alt, width = 18, height = 11, units = "cm", device = "png")
+ggsave("Figure2_nocomments.pdf", plot = fig_cutpoint_deaged_alt, width = 18, height = 11, units = "cm", device = "pdf")
+
 # ggsave("fig_cutpoint_deaged_alt.pdf", plot = fig_cutpoint_deaged_alt, dpi=1200, width = 9, height = 22, units = "cm", device = "pdf")
 ```
 
@@ -1483,13 +1538,15 @@ fig3s <- ggarrange(fig3b, fig3d, labels = c("A", "B"), nrow=2, font.label = list
 
 
 ```{r}
-fig3s_Alt <- ggarrange(fig3b_Alt, fig3d_Alt, labels = c("A", "B"),ncol = 1, nrow=2, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
+fig3s_Alt <- ggarrange(fig3b_Alt, fig3d_Alt, labels = c("A", "B"),ncol = 2, nrow=1, font.label = list(size = 11), common.legend = TRUE, legend = "bottom")
 
 fig3s_Alt
 
 #fig3s <- ggarrange(fig3a, fig3b,fig3c, fig3d, labels = c("A", "B","C","D"), nrow=2, ncol=2, font.label = list(size = 11))
 
-ggsave("Figure3.png",fig3s_Alt, width = 9, height = 18, units = "cm", device = "png")
+ggsave("Figure3.png",fig3s_Alt, width = 18, height = 9, units = "cm", device = "png")
+ggsave("Figure3.pdf",fig3s_Alt, width = 18, height = 9, units = "cm", device = "pdf")
+
 # ggsave("fig3s.pdf",fig3s, dpi = 1200, width = 18, height = 17.1, units = "cm", device = "pdf")
 ```
 
@@ -1516,8 +1573,8 @@ dados_hemi_v1 %>%
 ```{r}
 mean_K_I_S_agegroups <-
   dados_hemi_v1_agegroups %>% group_by(Diagnostic, Age_interval10) %>% summarise(
-    mean.T = mean(logAvgThickness, na.rm = TRUE),
-    SD_T = sd(logAvgThickness, na.rm = TRUE),
+    # mean.T = mean(logAvgThickness, na.rm = TRUE),
+    # SD_T = sd(logAvgThickness, na.rm = TRUE),
     mean.K = mean(Knorm, na.rm = TRUE),
     SD_K = sd(Knorm, na.rm = TRUE),
     mean.I = mean(Inorm, na.rm = TRUE),
@@ -1526,6 +1583,8 @@ mean_K_I_S_agegroups <-
     SD_S = sd(Snorm, na.rm = TRUE),
     N_SUBJ = n_distinct(SUBJ)
   )
+
+write.csv(mean_K_I_S_agegroups, "datafig3.csv")
 
 ```
 
