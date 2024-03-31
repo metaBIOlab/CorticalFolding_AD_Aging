@@ -1,6 +1,6 @@
 .Rproj.user
 .Rhistory
-.RData
+.RData*
 .Ruserdata
 dados_datasetscomp_alldata.csv
 dados_paper1.csv
@@ -17,4 +17,4 @@ tabela_sujeitos.csv
 *_files
 *.png
 clinicalcorrelation_test.*
-*.csv
+*_cache
