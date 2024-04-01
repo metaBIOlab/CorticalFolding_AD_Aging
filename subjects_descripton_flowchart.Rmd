@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ---
 title: "subjects_descripton_flowchart"
 author: "Fernanda Hansen Pacheco de Moraes"
