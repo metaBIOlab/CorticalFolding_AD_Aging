@@ -41,7 +41,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("D:/GitHub/CorticalFolding_AD_Aging")
+setwd("C:/Users/ferna/Documents/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
@@ -288,10 +288,6 @@ dados_lobos_v1 <- unique(filter(dados, ROI == "F" | ROI == "T" | ROI == "O" | RO
 
 # hemisphere data
 dados_hemi_v1 <- unique(filter(dados, ROI == "hemisphere", !is.na(K_age_decay)))
-```
-
-```{r include=FALSE}
-write.csv(dados_v1, "dados_v1.csv")
 ```
 
 # RESULTS
