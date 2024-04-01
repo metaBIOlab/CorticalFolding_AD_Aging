@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("~/GitHub/CorticalFolding_AD_Aging")
+setwd("C:/Users/ferna/Documents/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r call packages}
@@ -252,36 +252,6 @@ VisualQC <- full_join(VisualQC_ses_1, VisualQC_ses_2)
 subjects <- full_join(subjects, VisualQC)
 
 ```
-
-## Prioridades Ananssa
-
-```{r}
-prioridades_simoa <- read_excel("C:/Users/ferna/Downloads/Amostras usadas SIMOA_Prioridades para neuroimagem_2.xlsx", 
-    col_types = c("skip", "text", "text", 
-        "date", "numeric", "skip", "skip")) %>%
-  mutate(acq_date = Acquisition_Date) %>%
-  select(-c(Acquisition_Date, Diag.))
-```
-
-
-```{r}
-
-infos <- full_join(subjects, prioridades_simoa) %>%
-  select(c(SUBJ, Session, acq_date, AvgThickness, Classification, Prioridade))
-write.csv(infos, "prioridades_simoa.csv")
-
-```
-
-
-```{r}
-write.csv(subjects, "subjects.csv")
-
-subjects %>%
-  filter(Session == 1, Classification < 1 ) %>%
-  dplyr::select(SUBJ, Age, Diagnostic, Classification) %>%
-  unique()
-```
-
 
 # inclusion/exclusion criteria
 
