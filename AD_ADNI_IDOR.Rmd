@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r working directory}
-setwd("D:/GitHub/CorticalFolding_AD_Aging")
+setwd("C:/Users/ferna/Documents/GitHub/CorticalFolding_AD_Aging")
 ```
 
 ```{r functions, message=FALSE, warning=FALSE}
