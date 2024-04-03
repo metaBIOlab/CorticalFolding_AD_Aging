@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ---
 title: "Manuscript 1 from Fernanda Hansen P. de Moraes Thesis - Cortical folding alterations in humans due to aging and diseases"
 author: "Fernanda Hansen Pacheco de Moraes"
