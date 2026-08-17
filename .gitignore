@@ -17,3 +17,5 @@ tabela_sujeitos.csv
 *_files
 *.png
 clinicalcorrelation_test.*
+*.xlsx
+*.csv
